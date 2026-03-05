@@ -161,6 +161,35 @@ const insertMedia = db.prepare(`
 const findShowByTmdb = db.prepare('SELECT id FROM shows WHERE tmdb_id = ? AND type = ?');
 const findShowByTitle = db.prepare('SELECT id FROM shows WHERE title = ? AND type = ?');
 
+const getAllMediaPaths = db.prepare('SELECT id, file_path FROM media_items');
+const deleteMediaById = db.prepare('DELETE FROM media_items WHERE id = ?');
+const getShowsWithNoMedia = db.prepare(`
+  SELECT s.id FROM shows s
+  LEFT JOIN media_items m ON s.id = m.show_id
+  WHERE m.id IS NULL
+`);
+const deleteShowById = db.prepare('DELETE FROM shows WHERE id = ?');
+
+function removeUnreferencedMedia(validRelativePaths) {
+  const allMedia = getAllMediaPaths.all();
+  let removedMedia = 0;
+  for (const row of allMedia) {
+    if (!validRelativePaths.has(row.file_path)) {
+      deleteMediaById.run(row.id);
+      removedMedia++;
+    }
+  }
+
+  const orphanShows = getShowsWithNoMedia.all();
+  let removedShows = 0;
+  for (const row of orphanShows) {
+    deleteShowById.run(row.id);
+    removedShows++;
+  }
+
+  return { removedMedia, removedShows };
+}
+
 export async function scanLibrary() {
   if (!fs.existsSync(config.mediaRoot)) {
     throw new Error(`MEDIA_ROOT does not exist: ${config.mediaRoot}`);
@@ -168,6 +197,7 @@ export async function scanLibrary() {
 
   const files = walkDir(config.mediaRoot);
   const parsed = files.map(f => parseFilePath(f));
+  const validRelativePaths = new Set(parsed.map(p => p.relativePath));
   const groups = groupByShow(parsed);
   let added = 0;
 
@@ -208,5 +238,13 @@ export async function scanLibrary() {
     }
   }
 
-  return { totalFiles: files.length, newItems: added, shows: groups.length };
+  const { removedMedia, removedShows } = removeUnreferencedMedia(validRelativePaths);
+
+  return {
+    totalFiles: files.length,
+    newItems: added,
+    shows: groups.length,
+    removedMedia,
+    removedShows,
+  };
 }
