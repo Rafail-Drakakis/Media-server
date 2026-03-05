@@ -13,6 +13,15 @@ export default function Watchlist() {
       .finally(() => setLoading(false));
   }, []);
 
+  async function handleRemove(item) {
+    try {
+      await api.removeFromWatchlist(item.id);
+      setItems(prev => prev.filter(i => i.id !== item.id));
+    } catch (err) {
+      console.error(err);
+    }
+  }
+
   if (loading) return <div className="loading-screen">Loading...</div>;
 
   return (
@@ -22,7 +31,13 @@ export default function Watchlist() {
         <p className="empty-message">Your list is empty. Browse and add shows!</p>
       ) : (
         <div className="card-grid">
-          {items.map(item => <Card key={item.id} show={item} />)}
+          {items.map(item => (
+            <Card
+              key={item.id}
+              show={item}
+              onRemove={() => handleRemove(item)}
+            />
+          ))}
         </div>
       )}
     </div>

@@ -1,7 +1,7 @@
 import { useRef } from 'react';
 import Card from './Card';
 
-export default function Row({ title, items, progressMap }) {
+export default function Row({ title, items, progressMap, onRemove }) {
   const rowRef = useRef(null);
 
   if (!items || items.length === 0) return null;
@@ -20,9 +20,10 @@ export default function Row({ title, items, progressMap }) {
         <div className="row-items" ref={rowRef}>
           {items.map(item => (
             <Card
-              key={item.id}
+              key={item.id ?? item.media_id}
               show={item}
-              progress={progressMap?.[item.id] || null}
+              progress={progressMap?.[item.id] ?? progressMap?.[item.media_id] ?? null}
+              onRemove={onRemove ? () => onRemove(item) : undefined}
             />
           ))}
         </div>

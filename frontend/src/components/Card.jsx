@@ -1,8 +1,13 @@
 import { useNavigate } from 'react-router-dom';
 
-export default function Card({ show, progress }) {
+export default function Card({ show, progress, onRemove }) {
   const navigate = useNavigate();
   const poster = show.poster_path || show.posterPath;
+
+  function handleRemoveClick(e) {
+    e.stopPropagation();
+    onRemove?.();
+  }
 
   function handleClick() {
     if (show.show_id) {
@@ -18,6 +23,16 @@ export default function Card({ show, progress }) {
 
   return (
     <div className="card" onClick={handleClick}>
+      {onRemove && (
+        <button
+          type="button"
+          className="card-remove"
+          onClick={handleRemoveClick}
+          aria-label="Remove from list"
+        >
+          ×
+        </button>
+      )}
       {poster ? (
         <img src={poster} alt={show.title || show.show_title} loading="lazy" />
       ) : (

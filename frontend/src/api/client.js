@@ -65,6 +65,7 @@ export const api = {
   getProgress: () => request('/progress'),
   updateProgress: (mediaId, positionSeconds, durationSeconds) =>
     request('/progress', { method: 'PUT', body: { mediaId, positionSeconds, durationSeconds } }),
+  deleteProgress: (mediaId) => request(`/progress/${mediaId}`, { method: 'DELETE' }),
 
   getWatchlist: () => request('/watchlist'),
   addToWatchlist: (showId) => request('/watchlist', { method: 'POST', body: { showId } }),

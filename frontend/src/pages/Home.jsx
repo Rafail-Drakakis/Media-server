@@ -72,6 +72,20 @@ export default function Home() {
     }
   }
 
+  async function handleRemoveFromContinueWatching(item) {
+    try {
+      await api.deleteProgress(item.media_id);
+      setContinueWatching(prev => prev.filter(p => p.media_id !== item.media_id));
+      setProgressMap(prev => {
+        const next = { ...prev };
+        delete next[item.media_id];
+        return next;
+      });
+    } catch (err) {
+      console.error(err);
+    }
+  }
+
   if (loading) {
     return <div className="loading-screen">Loading library...</div>;
   }
@@ -97,7 +111,7 @@ export default function Home() {
                 {scanning ? 'Scanning...' : 'Rescan Library'}
               </button>
             </div>
-            <Row title="Continue Watching" items={continueWatching} progressMap={progressMap} />
+            <Row title="Continue Watching" items={continueWatching} progressMap={progressMap} onRemove={handleRemoveFromContinueWatching} />
             <Row title="Movies" items={movies} />
             <Row title="Series" items={series} />
             {genres.map(genre => (
