@@ -8,14 +8,17 @@ export default function Detail() {
   const [show, setShow] = useState(null);
   const [inWatchlist, setInWatchlist] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [playingIds, setPlayingIds] = useState(new Set());
 
   useEffect(() => {
     Promise.all([
       api.getShow(id),
       api.getWatchlist(),
-    ]).then(([showData, wl]) => {
+      api.getActiveVLC().catch(() => []),
+    ]).then(([showData, wl, activeIds]) => {
       setShow(showData);
       setInWatchlist(wl.some(w => w.id === showData.id));
+      setPlayingIds(new Set(activeIds));
     }).catch(console.error)
       .finally(() => setLoading(false));
   }, [id]);
@@ -36,11 +39,20 @@ export default function Detail() {
 
   async function launchVLC(mediaId) {
     try {
-      await api.launchInVLC(mediaId);
+      let startTime = 0;
+      const progressList = await api.getProgress().catch(() => []);
+      const saved = progressList.find(p => String(p.media_id) === String(mediaId));
+      if (saved && saved.position_seconds > 5) {
+        startTime = saved.position_seconds;
+      }
+      await api.launchInVLC(mediaId, startTime);
+      setPlayingIds(prev => new Set(prev).add(mediaId));
     } catch (err) {
       console.error('Failed to launch VLC:', err);
     }
   }
+
+  const isPlaying = (mediaId) => playingIds.has(mediaId);
 
   if (loading) return <div className="loading-screen">Loading...</div>;
   if (!show) return <div className="loading-screen">Show not found</div>;
@@ -72,9 +84,11 @@ export default function Detail() {
                 <button className="btn-play" onClick={() => playMedia(episodes[0].id)}>
                   &#9654; Play{show.type === 'series' ? ' S1E1' : ''}
                 </button>
-                <button className="btn-vlc" onClick={() => launchVLC(episodes[0].id)}>
-                  &#9654; VLC
-                </button>
+                {!isPlaying(episodes[0].id) && (
+                  <button className="btn-vlc" onClick={() => launchVLC(episodes[0].id)}>
+                    &#9654; VLC
+                  </button>
+                )}
               </>
             )}
             <button className="btn-secondary" onClick={toggleWatchlist}>
@@ -94,7 +108,7 @@ export default function Detail() {
                   <div key={ep.id} className="episode-item" onClick={() => playMedia(ep.id)}>
                     <span className="ep-number">E{ep.episode_number}</span>
                     <span className="ep-title">{ep.episode_title || `Episode ${ep.episode_number}`}</span>
-                    <button className="btn-vlc-sm" onClick={(e) => { e.stopPropagation(); launchVLC(ep.id); }}>VLC</button>
+                    {!isPlaying(ep.id) && <button className="btn-vlc-sm" onClick={(e) => { e.stopPropagation(); launchVLC(ep.id); }}>VLC</button>}
                     <button className="btn-play-sm">&#9654;</button>
                   </div>
                 ))}
@@ -110,7 +124,7 @@ export default function Detail() {
             {episodes.map(ep => (
               <div key={ep.id} className="episode-item" onClick={() => playMedia(ep.id)}>
                 <span className="ep-title">{ep.episode_title || show.title}</span>
-                <button className="btn-vlc-sm" onClick={(e) => { e.stopPropagation(); launchVLC(ep.id); }}>VLC</button>
+                {!isPlaying(ep.id) && <button className="btn-vlc-sm" onClick={(e) => { e.stopPropagation(); launchVLC(ep.id); }}>VLC</button>}
                 <button className="btn-play-sm">&#9654;</button>
               </div>
             ))}

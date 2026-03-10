@@ -75,4 +75,6 @@ export const api = {
 
   launchInVLC: (mediaId, startTime = 0) =>
     request(`/launch/${mediaId}`, { method: 'POST', body: { startTime } }),
+
+  getActiveVLC: () => request('/launch/active'),
 };
