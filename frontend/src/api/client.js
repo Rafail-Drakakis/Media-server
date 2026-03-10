@@ -72,4 +72,7 @@ export const api = {
   removeFromWatchlist: (showId) => request(`/watchlist/${showId}`, { method: 'DELETE' }),
 
   streamUrl: (mediaId) => `/api/stream/${mediaId}?token=${getToken()}`,
+
+  launchInVLC: (mediaId, startTime = 0) =>
+    request(`/launch/${mediaId}`, { method: 'POST', body: { startTime } }),
 };

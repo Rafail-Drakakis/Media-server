@@ -49,6 +49,7 @@ CREATE TABLE IF NOT EXISTS watchlist (
   UNIQUE(user_id, show_id)
 );
 
+CREATE UNIQUE INDEX IF NOT EXISTS idx_shows_tmdb_type ON shows(tmdb_id, type) WHERE tmdb_id IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_media_show ON media_items(show_id);
 CREATE INDEX IF NOT EXISTS idx_progress_user ON watch_progress(user_id);
 CREATE INDEX IF NOT EXISTS idx_watchlist_user ON watchlist(user_id);

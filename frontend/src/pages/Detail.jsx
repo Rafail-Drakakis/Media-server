@@ -34,6 +34,14 @@ export default function Detail() {
     navigate(`/watch/${mediaId}`);
   }
 
+  async function launchVLC(mediaId) {
+    try {
+      await api.launchInVLC(mediaId);
+    } catch (err) {
+      console.error('Failed to launch VLC:', err);
+    }
+  }
+
   if (loading) return <div className="loading-screen">Loading...</div>;
   if (!show) return <div className="loading-screen">Show not found</div>;
 
@@ -60,9 +68,14 @@ export default function Detail() {
           <p className="detail-overview">{show.overview}</p>
           <div className="detail-actions">
             {episodes.length > 0 && (
-              <button className="btn-play" onClick={() => playMedia(episodes[0].id)}>
-                &#9654; Play{show.type === 'series' ? ' S1E1' : ''}
-              </button>
+              <>
+                <button className="btn-play" onClick={() => playMedia(episodes[0].id)}>
+                  &#9654; Play{show.type === 'series' ? ' S1E1' : ''}
+                </button>
+                <button className="btn-vlc" onClick={() => launchVLC(episodes[0].id)}>
+                  &#9654; VLC
+                </button>
+              </>
             )}
             <button className="btn-secondary" onClick={toggleWatchlist}>
               {inWatchlist ? '&#10003; In My List' : '+ My List'}
@@ -81,6 +94,7 @@ export default function Detail() {
                   <div key={ep.id} className="episode-item" onClick={() => playMedia(ep.id)}>
                     <span className="ep-number">E{ep.episode_number}</span>
                     <span className="ep-title">{ep.episode_title || `Episode ${ep.episode_number}`}</span>
+                    <button className="btn-vlc-sm" onClick={(e) => { e.stopPropagation(); launchVLC(ep.id); }}>VLC</button>
                     <button className="btn-play-sm">&#9654;</button>
                   </div>
                 ))}
@@ -96,6 +110,7 @@ export default function Detail() {
             {episodes.map(ep => (
               <div key={ep.id} className="episode-item" onClick={() => playMedia(ep.id)}>
                 <span className="ep-title">{ep.episode_title || show.title}</span>
+                <button className="btn-vlc-sm" onClick={(e) => { e.stopPropagation(); launchVLC(ep.id); }}>VLC</button>
                 <button className="btn-play-sm">&#9654;</button>
               </div>
             ))}

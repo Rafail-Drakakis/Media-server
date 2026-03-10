@@ -1,9 +1,20 @@
 import express from 'express';
 import cors from 'cors';
+import fs from 'fs';
+import path from 'path';
 import { config } from './config.js';
 import { initDb } from './db/index.js';
 
+function purgeMediaTrash() {
+  const trashDir = path.join(config.mediaRoot, '.Trash-1000');
+  if (fs.existsSync(trashDir)) {
+    fs.rmSync(trashDir, { recursive: true, force: true });
+    console.log(`Removed ${trashDir}`);
+  }
+}
+
 async function start() {
+  purgeMediaTrash();
   await initDb();
 
   const { default: authRoutes } = await import('./routes/auth.js');
@@ -11,6 +22,7 @@ async function start() {
   const { default: progressRoutes } = await import('./routes/progress.js');
   const { default: watchlistRoutes } = await import('./routes/watchlist.js');
   const { default: streamRoutes } = await import('./routes/stream.js');
+  const { default: launchRoutes } = await import('./routes/launch.js');
 
   const app = express();
 
@@ -22,6 +34,7 @@ async function start() {
   app.use('/api/progress', progressRoutes);
   app.use('/api/watchlist', watchlistRoutes);
   app.use('/api/stream', streamRoutes);
+  app.use('/api/launch', launchRoutes);
 
   app.get('/api/health', (_req, res) => res.json({ ok: true }));
 

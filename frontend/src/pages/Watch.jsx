@@ -54,6 +54,16 @@ export default function Watch() {
     navigate(-1);
   }
 
+  async function openInVLC() {
+    const v = videoRef.current;
+    const startTime = v ? Math.floor(v.currentTime) : 0;
+    try {
+      await api.launchInVLC(mediaId, startTime);
+    } catch (err) {
+      console.error('Failed to launch VLC:', err);
+    }
+  }
+
   const token = localStorage.getItem('token');
 
   return (
@@ -63,6 +73,7 @@ export default function Watch() {
     >
       <div className={`watch-top-bar ${showControls ? 'visible' : ''}`}>
         <button className="btn-back" onClick={handleBack}>&#10094; Back</button>
+        <button className="btn-vlc-watch" onClick={openInVLC}>&#9654; Open in VLC</button>
       </div>
       <video
         ref={videoRef}

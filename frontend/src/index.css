@@ -323,6 +323,55 @@ button {
   background: rgba(109, 109, 110, 0.5);
 }
 
+/* ===== VLC Buttons ===== */
+.btn-vlc {
+  padding: 0.7rem 1.5rem;
+  border-radius: var(--radius);
+  background: #e87d0e;
+  color: #fff;
+  font-size: 1rem;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: background 0.2s;
+}
+
+.btn-vlc:hover {
+  background: #ff8c1a;
+}
+
+.btn-vlc-sm {
+  background: none;
+  color: #e87d0e;
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 0.2rem 0.5rem;
+  border-radius: var(--radius);
+  border: 1px solid #e87d0e;
+  transition: background 0.2s, color 0.2s;
+}
+
+.btn-vlc-sm:hover {
+  background: #e87d0e;
+  color: #fff;
+}
+
+.btn-vlc-watch {
+  background: #e87d0e;
+  color: #fff;
+  font-size: 0.9rem;
+  font-weight: 600;
+  padding: 0.4rem 1rem;
+  border-radius: var(--radius);
+  margin-left: auto;
+  transition: background 0.2s;
+}
+
+.btn-vlc-watch:hover {
+  background: #ff8c1a;
+}
+
 /* ===== Rows ===== */
 .rows-container {
   padding: 0 4% 3rem;
@@ -640,6 +689,8 @@ button {
   opacity: 0;
   transition: opacity 0.3s;
   background: linear-gradient(to bottom, rgba(0,0,0,0.7), transparent);
+  display: flex;
+  align-items: center;
 }
 
 .watch-top-bar.visible {

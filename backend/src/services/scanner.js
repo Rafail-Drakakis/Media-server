@@ -180,6 +180,14 @@ async function fetchShowMetadata(group) {
 const insertShow = db.prepare(`
   INSERT INTO shows (tmdb_id, type, title, overview, poster_path, backdrop_path, release_date, vote_average, genres)
   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+  ON CONFLICT(tmdb_id, type) WHERE tmdb_id IS NOT NULL DO UPDATE SET
+    title = excluded.title,
+    overview = excluded.overview,
+    poster_path = excluded.poster_path,
+    backdrop_path = excluded.backdrop_path,
+    release_date = excluded.release_date,
+    vote_average = excluded.vote_average,
+    genres = excluded.genres
 `);
 
 const insertMedia = db.prepare(`
@@ -193,7 +201,12 @@ const insertMedia = db.prepare(`
 `);
 
 const findShowByTmdb = db.prepare('SELECT id FROM shows WHERE tmdb_id = ? AND type = ?');
-const findShowByTitle = db.prepare('SELECT id FROM shows WHERE title = ? AND type = ?');
+const findShowByTitle = db.prepare(`
+  SELECT id FROM shows
+  WHERE REPLACE(REPLACE(REPLACE(REPLACE(LOWER(title), '-', ' '), '.', ' '), '_', ' '), '  ', ' ')
+      = REPLACE(REPLACE(REPLACE(REPLACE(LOWER(?), '-', ' '), '.', ' '), '_', ' '), '  ', ' ')
+    AND type = ?
+`);
 
 const getAllMediaPaths = db.prepare('SELECT id, file_path FROM media_items');
 const deleteMediaById = db.prepare('DELETE FROM media_items WHERE id = ?');
@@ -203,6 +216,43 @@ const getShowsWithNoMedia = db.prepare(`
   WHERE m.id IS NULL
 `);
 const deleteShowById = db.prepare('DELETE FROM shows WHERE id = ?');
+const reassignMedia = db.prepare('UPDATE media_items SET show_id = ? WHERE show_id = ?');
+const reassignWatchlist = db.prepare('UPDATE OR IGNORE watchlist SET show_id = ? WHERE show_id = ?');
+const deleteWatchlistForShow = db.prepare('DELETE FROM watchlist WHERE show_id = ?');
+
+function deduplicateShows() {
+  const allShows = db.prepare('SELECT id, tmdb_id, type, title FROM shows ORDER BY id').all();
+  const seen = new Map();
+  let merged = 0;
+
+  for (const show of allShows) {
+    const normalizedTitle = show.title
+      .toLowerCase()
+      .replace(/[-._]/g, ' ')
+      .replace(/\s{2,}/g, ' ')
+      .trim();
+    const tmdbKey = show.tmdb_id ? `tmdb::${show.tmdb_id}::${show.type}` : null;
+    const titleKey = `title::${normalizedTitle}::${show.type}`;
+
+    const keepId = (tmdbKey && seen.get(tmdbKey)) || seen.get(titleKey);
+
+    if (keepId) {
+      reassignMedia.run(keepId, show.id);
+      reassignWatchlist.run(keepId, show.id);
+      deleteWatchlistForShow.run(show.id);
+      deleteShowById.run(show.id);
+      merged++;
+    } else {
+      if (tmdbKey) seen.set(tmdbKey, show.id);
+      seen.set(titleKey, show.id);
+    }
+  }
+
+  if (merged > 0) {
+    console.log(`Deduplicated ${merged} duplicate show(s)`);
+  }
+  return merged;
+}
 
 function removeUnreferencedMedia(validRelativePaths) {
   const allMedia = getAllMediaPaths.all();
@@ -228,6 +278,8 @@ export async function scanLibrary() {
   if (!fs.existsSync(config.mediaRoot)) {
     throw new Error(`MEDIA_ROOT does not exist: ${config.mediaRoot}`);
   }
+
+  deduplicateShows();
 
   const files = walkDir(config.mediaRoot);
   const parsed = files.map(f => parseFilePath(f));
