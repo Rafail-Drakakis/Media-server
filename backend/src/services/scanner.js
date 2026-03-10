@@ -31,13 +31,18 @@ function walkDir(dir) {
   return results;
 }
 
-const EPISODE_RE = /[Ss](\d{1,3})[Ee](\d{1,4})/;
+const SXE_RE = /[Ss](\d{1,3})[Ee](\d{1,4})/;
+const GREEK_EP_RE = /Επεισόδιο\s+(\d+)/;
+const ENGLISH_EP_RE = /[Ee]pisode\s+(\d+)/;
+const SEASON_FOLDER_RE = /^[Ss]eason\s*(\d+)$/;
 const YEAR_RE = /[\(\[]?((?:19|20)\d{2})[\)\]]?/;
 
 function cleanTitle(name) {
   return name
     .replace(/\.\w{2,4}$/, '')
-    .replace(EPISODE_RE, '')
+    .replace(SXE_RE, '')
+    .replace(GREEK_EP_RE, '')
+    .replace(ENGLISH_EP_RE, '')
     .replace(YEAR_RE, '')
     .replace(/[\._\-\[\]()]/g, ' ')
     .replace(/\s{2,}/g, ' ')
@@ -48,18 +53,51 @@ function parseFilePath(absPath) {
   const rel = path.relative(config.mediaRoot, absPath);
   const parts = rel.split(path.sep);
   const filename = parts[parts.length - 1];
-  const epMatch = filename.match(EPISODE_RE);
 
-  if (epMatch) {
-    const seasonNum = parseInt(epMatch[1], 10);
-    const episodeNum = parseInt(epMatch[2], 10);
-    const showFolder = parts.length >= 2 ? parts[0] : filename;
-    const yearMatch = showFolder.match(YEAR_RE);
-    const title = cleanTitle(showFolder);
+  const topFolder = parts[0].toLowerCase();
+  const isSeriesFolder = topFolder === 'series';
+
+  const sxeMatch = filename.match(SXE_RE);
+  const greekEpMatch = filename.match(GREEK_EP_RE);
+  const engEpMatch = filename.match(ENGLISH_EP_RE);
+  const isEpisode = isSeriesFolder || sxeMatch || greekEpMatch || engEpMatch;
+
+  if (isEpisode) {
+    let seasonNum = 1;
+    let episodeNum = null;
+
+    if (sxeMatch) {
+      seasonNum = parseInt(sxeMatch[1], 10);
+      episodeNum = parseInt(sxeMatch[2], 10);
+    } else if (greekEpMatch) {
+      episodeNum = parseInt(greekEpMatch[1], 10);
+    } else if (engEpMatch) {
+      episodeNum = parseInt(engEpMatch[1], 10);
+    }
+
+    for (const p of parts) {
+      const sm = p.match(SEASON_FOLDER_RE);
+      if (sm) {
+        seasonNum = parseInt(sm[1], 10);
+        break;
+      }
+    }
+
+    let showTitle = cleanTitle(filename);
+    let year = null;
+    for (let i = parts.length - 2; i >= 0; i--) {
+      if (SEASON_FOLDER_RE.test(parts[i])) continue;
+      if (parts[i].toLowerCase() === 'series') continue;
+      showTitle = cleanTitle(parts[i]);
+      const ym = parts[i].match(YEAR_RE);
+      if (ym) year = ym[1];
+      break;
+    }
+
     return {
       type: 'series',
-      title,
-      year: yearMatch ? yearMatch[1] : null,
+      title: showTitle,
+      year,
       seasonNumber: seasonNum,
       episodeNumber: episodeNum,
       episodeTitle: cleanTitle(filename),
