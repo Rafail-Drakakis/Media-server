@@ -68,31 +68,18 @@ function parseFilePath(absPath) {
   }
 
   const yearMatch = filename.match(YEAR_RE);
-  let title;
-  if (parts.length >= 2) {
-    title = cleanTitle(parts[parts.length - 2]);
-    if (!yearMatch) {
-      const folderYear = parts[parts.length - 2].match(YEAR_RE);
-      if (folderYear) {
-        return {
-          type: 'movie',
-          title: cleanTitle(parts[parts.length - 2]),
-          year: folderYear[1],
-          seasonNumber: null,
-          episodeNumber: null,
-          episodeTitle: '',
-          relativePath: rel,
-        };
-      }
-    }
-  } else {
-    title = cleanTitle(filename);
+  const title = cleanTitle(filename);
+  let year = yearMatch ? yearMatch[1] : null;
+
+  if (!year && parts.length >= 2) {
+    const folderYear = parts[parts.length - 2].match(YEAR_RE);
+    if (folderYear) year = folderYear[1];
   }
 
   return {
     type: 'movie',
     title,
-    year: yearMatch ? yearMatch[1] : null,
+    year,
     seasonNumber: null,
     episodeNumber: null,
     episodeTitle: '',
@@ -114,12 +101,16 @@ function groupByShow(parsed) {
 
 async function fetchShowMetadata(group) {
   let tmdbResult, details;
-  if (group.type === 'series') {
-    tmdbResult = await searchTV(group.title, group.year);
-    if (tmdbResult) details = await getTVDetails(tmdbResult.id);
-  } else {
-    tmdbResult = await searchMovie(group.title, group.year);
-    if (tmdbResult) details = await getMovieDetails(tmdbResult.id);
+  try {
+    if (group.type === 'series') {
+      tmdbResult = await searchTV(group.title, group.year);
+      if (tmdbResult) details = await getTVDetails(tmdbResult.id);
+    } else {
+      tmdbResult = await searchMovie(group.title, group.year);
+      if (tmdbResult) details = await getMovieDetails(tmdbResult.id);
+    }
+  } catch (err) {
+    console.warn(`TMDB lookup failed for "${group.title}":`, err.message);
   }
 
   if (!details) {
@@ -154,8 +145,13 @@ const insertShow = db.prepare(`
 `);
 
 const insertMedia = db.prepare(`
-  INSERT OR IGNORE INTO media_items (show_id, file_path, season_number, episode_number, episode_title)
+  INSERT INTO media_items (show_id, file_path, season_number, episode_number, episode_title)
   VALUES (?, ?, ?, ?, ?)
+  ON CONFLICT(file_path) DO UPDATE SET
+    show_id = excluded.show_id,
+    season_number = excluded.season_number,
+    episode_number = excluded.episode_number,
+    episode_title = excluded.episode_title
 `);
 
 const findShowByTmdb = db.prepare('SELECT id FROM shows WHERE tmdb_id = ? AND type = ?');
