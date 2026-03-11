@@ -45,6 +45,8 @@ const FOLDER_TYPE_MAP = {
   'documentaries': 'documentary',
   'podcasts': 'podcast',
   'talks': 'talk',
+  'performances': 'performance',
+  'stand up': 'standup',
 };
 
 const EPISODE_TYPES = new Set(['series', 'podcast', 'documentary']);
@@ -155,7 +157,7 @@ function groupByShow(parsed) {
   return [...groups.values()];
 }
 
-const SKIP_TMDB_TYPES = new Set(['podcast', 'talk', 'concert']);
+const SKIP_TMDB_TYPES = new Set(['podcast', 'talk', 'concert', 'performance', 'standup']);
 
 async function fetchShowMetadata(group) {
   if (SKIP_TMDB_TYPES.has(group.type)) {

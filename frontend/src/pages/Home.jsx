@@ -10,6 +10,8 @@ const TYPE_LABELS = {
   documentary: 'Documentaries',
   podcast: 'Podcasts',
   talk: 'Talks',
+   performance: 'Performances',
+   standup: 'Stand up',
 };
 
 export default function Home() {
@@ -47,7 +49,8 @@ export default function Home() {
       }
       setTypeRows(rows);
 
-      setGenres(genreList);
+      const filteredGenres = genreList.filter(g => g !== 'Music' && g !== 'Documentary');
+      setGenres(filteredGenres);
       setContinueWatching(progress.filter(p => p.position_seconds > 0));
 
       const pMap = {};
@@ -65,7 +68,7 @@ export default function Home() {
       }
 
       const gShows = {};
-      for (const genre of genreList) {
+      for (const genre of filteredGenres) {
         gShows[genre] = allShows.filter(s =>
           Array.isArray(s.genres) && s.genres.includes(genre)
         );
