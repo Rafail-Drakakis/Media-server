@@ -3,9 +3,17 @@ import { api } from '../api/client';
 import Hero from '../components/Hero';
 import Row from '../components/Row';
 
+const TYPE_LABELS = {
+  movie: 'Movies',
+  series: 'Series',
+  concert: 'Concerts',
+  documentary: 'Documentaries',
+  podcast: 'Podcasts',
+  talk: 'Talks',
+};
+
 export default function Home() {
-  const [movies, setMovies] = useState([]);
-  const [series, setSeries] = useState([]);
+  const [typeRows, setTypeRows] = useState({});
   const [continueWatching, setContinueWatching] = useState([]);
   const [genres, setGenres] = useState([]);
   const [genreShows, setGenreShows] = useState({});
@@ -13,21 +21,32 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [scanning, setScanning] = useState(false);
   const [progressMap, setProgressMap] = useState({});
+  const [typeOrder, setTypeOrder] = useState([]);
 
   useEffect(() => { loadData(); }, []);
 
   async function loadData() {
     setLoading(true);
     try {
-      const [movieList, seriesList, progress, genreList] = await Promise.all([
-        api.getLibrary({ type: 'movie' }),
-        api.getLibrary({ type: 'series' }),
+      const [types, progress, genreList] = await Promise.all([
+        api.getTypes().catch(() => ['movie', 'series']),
         api.getProgress(),
         api.getGenres(),
       ]);
 
-      setMovies(movieList);
-      setSeries(seriesList);
+      setTypeOrder(types);
+
+      const libraryFetches = types.map(t => api.getLibrary({ type: t }));
+      const libraryResults = await Promise.all(libraryFetches);
+
+      const rows = {};
+      const allShows = [];
+      for (let i = 0; i < types.length; i++) {
+        rows[types[i]] = libraryResults[i];
+        allShows.push(...libraryResults[i]);
+      }
+      setTypeRows(rows);
+
       setGenres(genreList);
       setContinueWatching(progress.filter(p => p.position_seconds > 0));
 
@@ -37,18 +56,17 @@ export default function Home() {
       }
       setProgressMap(pMap);
 
-      const all = [...movieList, ...seriesList];
-      if (all.length > 0) {
-        const withBackdrop = all.filter(s => s.backdrop_path);
+      if (allShows.length > 0) {
+        const withBackdrop = allShows.filter(s => s.backdrop_path);
         setHero(withBackdrop.length > 0
           ? withBackdrop[Math.floor(Math.random() * withBackdrop.length)]
-          : all[0]
+          : allShows[0]
         );
       }
 
       const gShows = {};
       for (const genre of genreList) {
-        gShows[genre] = all.filter(s =>
+        gShows[genre] = allShows.filter(s =>
           Array.isArray(s.genres) && s.genres.includes(genre)
         );
       }
@@ -90,14 +108,14 @@ export default function Home() {
     return <div className="loading-screen">Loading library...</div>;
   }
 
-  const isEmpty = movies.length === 0 && series.length === 0;
+  const totalShows = Object.values(typeRows).reduce((sum, arr) => sum + arr.length, 0);
 
   return (
     <main className="home">
-      {isEmpty ? (
+      {totalShows === 0 ? (
         <div className="empty-library">
           <h2>Your library is empty</h2>
-          <p>Scan your media folder to find movies and series.</p>
+          <p>Scan your media folder to find content.</p>
           <button className="btn-play" onClick={handleScan} disabled={scanning}>
             {scanning ? 'Scanning...' : 'Scan Library'}
           </button>
@@ -112,8 +130,9 @@ export default function Home() {
               </button>
             </div>
             <Row title="Continue Watching" items={continueWatching} progressMap={progressMap} onRemove={handleRemoveFromContinueWatching} />
-            <Row title="Movies" items={movies} />
-            <Row title="Series" items={series} />
+            {typeOrder.map(type => (
+              <Row key={type} title={TYPE_LABELS[type] || type} items={typeRows[type] || []} />
+            ))}
             {genres.map(genre => (
               <Row key={genre} title={genre} items={genreShows[genre]} />
             ))}

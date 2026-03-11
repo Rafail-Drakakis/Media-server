@@ -59,6 +59,7 @@ export const api = {
   },
   getShow: (id) => request(`/library/${id}`),
   searchLibrary: (q) => request(`/library/search?q=${encodeURIComponent(q)}`),
+  getTypes: () => request('/library/types'),
   getGenres: () => request('/library/genres'),
   scanLibrary: () => request('/library/scan', { method: 'POST' }),
 

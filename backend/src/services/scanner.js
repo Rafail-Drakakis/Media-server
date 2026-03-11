@@ -36,6 +36,18 @@ const GREEK_EP_RE = /Επεισόδιο\s+(\d+)/;
 const ENGLISH_EP_RE = /[Ee]pisode\s+(\d+)/;
 const SEASON_FOLDER_RE = /^[Ss]eason\s*(\d+)$/;
 const YEAR_RE = /[\(\[]?((?:19|20)\d{2})[\)\]]?/;
+const NUMBERED_PREFIX_RE = /^(\d{1,3})\s*[-–.]\s*/;
+
+const FOLDER_TYPE_MAP = {
+  'movies': 'movie',
+  'series': 'series',
+  'concerts': 'concert',
+  'documentaries': 'documentary',
+  'podcasts': 'podcast',
+  'talks': 'talk',
+};
+
+const EPISODE_TYPES = new Set(['series', 'podcast', 'documentary']);
 
 function cleanTitle(name) {
   return name
@@ -55,14 +67,18 @@ function parseFilePath(absPath) {
   const filename = parts[parts.length - 1];
 
   const topFolder = parts[0].toLowerCase();
-  const isSeriesFolder = topFolder === 'series';
+  const contentType = FOLDER_TYPE_MAP[topFolder] || 'movie';
 
   const sxeMatch = filename.match(SXE_RE);
   const greekEpMatch = filename.match(GREEK_EP_RE);
   const engEpMatch = filename.match(ENGLISH_EP_RE);
-  const isEpisode = isSeriesFolder || sxeMatch || greekEpMatch || engEpMatch;
+  const numberedMatch = filename.match(NUMBERED_PREFIX_RE);
 
-  if (isEpisode) {
+  const hasEpisodePattern = sxeMatch || greekEpMatch || engEpMatch || numberedMatch;
+  const isInSubfolder = parts.length >= 3;
+  const isEpisode = EPISODE_TYPES.has(contentType) || hasEpisodePattern;
+
+  if (isEpisode && (hasEpisodePattern || isInSubfolder)) {
     let seasonNum = 1;
     let episodeNum = null;
 
@@ -73,6 +89,8 @@ function parseFilePath(absPath) {
       episodeNum = parseInt(greekEpMatch[1], 10);
     } else if (engEpMatch) {
       episodeNum = parseInt(engEpMatch[1], 10);
+    } else if (numberedMatch) {
+      episodeNum = parseInt(numberedMatch[1], 10);
     }
 
     for (const p of parts) {
@@ -87,7 +105,7 @@ function parseFilePath(absPath) {
     let year = null;
     for (let i = parts.length - 2; i >= 0; i--) {
       if (SEASON_FOLDER_RE.test(parts[i])) continue;
-      if (parts[i].toLowerCase() === 'series') continue;
+      if (FOLDER_TYPE_MAP[parts[i].toLowerCase()]) continue;
       showTitle = cleanTitle(parts[i]);
       const ym = parts[i].match(YEAR_RE);
       if (ym) year = ym[1];
@@ -95,7 +113,7 @@ function parseFilePath(absPath) {
     }
 
     return {
-      type: 'series',
+      type: contentType,
       title: showTitle,
       year,
       seasonNumber: seasonNum,
@@ -115,7 +133,7 @@ function parseFilePath(absPath) {
   }
 
   return {
-    type: 'movie',
+    type: contentType,
     title,
     year,
     seasonNumber: null,
@@ -137,13 +155,32 @@ function groupByShow(parsed) {
   return [...groups.values()];
 }
 
+const SKIP_TMDB_TYPES = new Set(['podcast', 'talk', 'concert']);
+
 async function fetchShowMetadata(group) {
+  if (SKIP_TMDB_TYPES.has(group.type)) {
+    return {
+      tmdbId: null,
+      title: group.title,
+      overview: '',
+      posterPath: '',
+      backdropPath: '',
+      releaseDate: '',
+      voteAverage: 0,
+      genres: '[]',
+    };
+  }
+
   let tmdbResult, details;
+  const useTV = group.type === 'series'
+    || (group.type === 'documentary' && group.episodes.length > 1);
+
   try {
-    if (group.type === 'series') {
+    if (useTV) {
       tmdbResult = await searchTV(group.title, group.year);
       if (tmdbResult) details = await getTVDetails(tmdbResult.id);
-    } else {
+    }
+    if (!details) {
       tmdbResult = await searchMovie(group.title, group.year);
       if (tmdbResult) details = await getMovieDetails(tmdbResult.id);
     }

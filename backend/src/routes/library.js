@@ -38,6 +38,11 @@ router.get('/', (req, res) => {
   res.json(shows.map(formatShow));
 });
 
+router.get('/types', (_req, res) => {
+  const rows = db.prepare('SELECT DISTINCT type FROM shows ORDER BY type').all();
+  res.json(rows.map(r => r.type));
+});
+
 router.get('/genres', (_req, res) => {
   const shows = db.prepare('SELECT genres FROM shows').all();
   const genreSet = new Set();

@@ -82,7 +82,7 @@ export default function Detail() {
             {episodes.length > 0 && (
               <>
                 <button className="btn-play" onClick={() => playMedia(episodes[0].id)}>
-                  &#9654; Play{show.type === 'series' ? ' S1E1' : ''}
+                  &#9654; Play{episodes.length > 1 ? ' E1' : ''}
                 </button>
                 {!isPlaying(episodes[0].id) && (
                   <button className="btn-vlc" onClick={() => launchVLC(episodes[0].id)}>
@@ -98,7 +98,7 @@ export default function Detail() {
         </div>
       </div>
 
-      {show.type === 'series' && seasons.length > 0 && (
+      {episodes.length > 1 && seasons.length > 1 && (
         <div className="episodes-section">
           {seasons.map(sNum => (
             <div key={sNum} className="season-block">
@@ -118,12 +118,13 @@ export default function Detail() {
         </div>
       )}
 
-      {show.type === 'movie' && episodes.length > 0 && (
+      {episodes.length > 1 && seasons.length <= 1 && (
         <div className="episodes-section">
           <div className="episode-list">
             {episodes.map(ep => (
               <div key={ep.id} className="episode-item" onClick={() => playMedia(ep.id)}>
-                <span className="ep-title">{ep.episode_title || show.title}</span>
+                {ep.episode_number && <span className="ep-number">E{ep.episode_number}</span>}
+                <span className="ep-title">{ep.episode_title || `Episode ${ep.episode_number || ''}`}</span>
                 {!isPlaying(ep.id) && <button className="btn-vlc-sm" onClick={(e) => { e.stopPropagation(); launchVLC(ep.id); }}>VLC</button>}
                 <button className="btn-play-sm">&#9654;</button>
               </div>

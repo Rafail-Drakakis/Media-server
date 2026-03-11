@@ -9,7 +9,7 @@ CREATE TABLE IF NOT EXISTS users (
 CREATE TABLE IF NOT EXISTS shows (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   tmdb_id INTEGER,
-  type TEXT NOT NULL CHECK(type IN ('movie', 'series')),
+  type TEXT NOT NULL CHECK(type IN ('movie', 'series', 'concert', 'documentary', 'podcast', 'talk')),
   title TEXT NOT NULL,
   overview TEXT DEFAULT '',
   poster_path TEXT DEFAULT '',
