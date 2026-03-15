@@ -7,6 +7,7 @@ import {
   getMovieDetails, getTVDetails,
   posterUrl, backdropUrl,
 } from './tmdb.js';
+import { generateShowThumbnail } from './thumbnail.js';
 
 const VIDEO_EXTENSIONS = new Set([
   '.mp4', '.mkv', '.avi', '.webm', '.mov', '.m4v', '.wmv', '.flv', '.ts',
@@ -239,6 +240,7 @@ const insertMedia = db.prepare(`
     episode_title = excluded.episode_title
 `);
 
+const updateShowPoster = db.prepare('UPDATE shows SET poster_path = ?, backdrop_path = ? WHERE id = ?');
 const findShowByTmdb = db.prepare('SELECT id FROM shows WHERE tmdb_id = ? AND type = ?');
 const findShowByTitle = db.prepare(`
   SELECT id FROM shows
@@ -360,6 +362,18 @@ export async function scanLibrary() {
         ep.seasonNumber, ep.episodeNumber, ep.episodeTitle
       );
       if (r.changes > 0) added++;
+    }
+
+    if (!meta.posterPath && group.episodes.length > 0) {
+      const sorted = [...group.episodes].sort((a, b) => {
+        const s = (a.seasonNumber ?? 0) - (b.seasonNumber ?? 0);
+        return s !== 0 ? s : (a.episodeNumber ?? 0) - (b.episodeNumber ?? 0);
+      });
+      const first = sorted[0];
+      const thumbUrl = await generateShowThumbnail(showId, first.relativePath);
+      if (thumbUrl) {
+        updateShowPoster.run(thumbUrl, thumbUrl, showId);
+      }
     }
   }
 
