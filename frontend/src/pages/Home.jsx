@@ -51,11 +51,21 @@ export default function Home() {
 
       const filteredGenres = genreList.filter(g => g !== 'Music' && g !== 'Documentary');
       setGenres(filteredGenres);
-      setContinueWatching(progress.filter(p => p.position_seconds > 0));
+
+      const withProgress = progress.filter(p => p.position_seconds > 0);
+      const seenSeries = new Set();
+      const continueList = withProgress.filter(p => {
+        if (p.show_type === 'series' && p.show_id != null) {
+          if (seenSeries.has(p.show_id)) return false;
+          seenSeries.add(p.show_id);
+        }
+        return true;
+      });
+      setContinueWatching(continueList);
 
       const pMap = {};
       for (const p of progress) {
-        pMap[p.show_id || p.media_id] = p;
+        pMap[p.media_id] = p;
       }
       setProgressMap(pMap);
 

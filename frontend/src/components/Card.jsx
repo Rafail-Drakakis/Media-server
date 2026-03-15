@@ -10,7 +10,9 @@ export default function Card({ show, progress, onRemove }) {
   }
 
   function handleClick() {
-    if (show.show_id) {
+    if (onRemove && show.media_id != null) {
+      navigate(`/watch/${show.media_id}`);
+    } else if (show.show_id) {
       navigate(`/show/${show.show_id}`);
     } else {
       navigate(`/show/${show.id}`);
