@@ -63,6 +63,27 @@ export default function Watch() {
     navigate(-1);
   }
 
+  const SEEK_SECONDS = 5;
+
+  useEffect(() => {
+    function onKeyDown(e) {
+      const v = videoRef.current;
+      if (!v || v.readyState < 1) return;
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) return;
+      if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        e.stopPropagation();
+        v.currentTime = Math.max(0, v.currentTime - SEEK_SECONDS);
+      } else if (e.key === 'ArrowRight') {
+        e.preventDefault();
+        e.stopPropagation();
+        v.currentTime = Math.min(v.duration, v.currentTime + SEEK_SECONDS);
+      }
+    }
+    window.addEventListener('keydown', onKeyDown, true);
+    return () => window.removeEventListener('keydown', onKeyDown, true);
+  }, []);
+
   const token = localStorage.getItem('token');
   const hasSubtitles = subtitles.length > 0;
 
@@ -73,49 +94,6 @@ export default function Watch() {
     >
       <div className={`watch-top-bar ${showControls ? 'visible' : ''}`}>
         <button className="btn-back" onClick={handleBack}>&#10094; Back</button>
-        {hasSubtitles && (
-          <div className="watch-subtitle-select">
-            <span className="subtitle-label">Subtitles</span>
-            <div className="subtitle-dropdown">
-              <button
-                type="button"
-                className="subtitle-toggle"
-                onClick={() => setSubtitleMenuOpen(prev => !prev)}
-              >
-                {selectedSubtitleIndex === null
-                  ? 'Off'
-                  : (subtitles.find(s => s.index === selectedSubtitleIndex)?.label ?? 'Subtitle')}
-              </button>
-              {subtitleMenuOpen && (
-                <div className="subtitle-menu">
-                  <button
-                    type="button"
-                    className="subtitle-menu-item"
-                    onClick={() => {
-                      setSelectedSubtitleIndex(null);
-                      setSubtitleMenuOpen(false);
-                    }}
-                  >
-                    Off
-                  </button>
-                  {subtitles.map(({ index, label }) => (
-                    <button
-                      key={index}
-                      type="button"
-                      className="subtitle-menu-item"
-                      onClick={() => {
-                        setSelectedSubtitleIndex(index);
-                        setSubtitleMenuOpen(false);
-                      }}
-                    >
-                      {label}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        )}
       </div>
       <video
         ref={videoRef}
@@ -137,6 +115,48 @@ export default function Watch() {
           />
         )}
       </video>
+      {hasSubtitles && (
+        <div className={`watch-bottom-bar ${showControls ? 'visible' : ''}`}>
+          <div className="watch-cc-wrap">
+            <button
+              type="button"
+              className="watch-cc-btn"
+              onClick={() => setSubtitleMenuOpen(prev => !prev)}
+              aria-label="Subtitles"
+              title="Subtitles"
+            >
+              CC
+            </button>
+            {subtitleMenuOpen && (
+              <div className="watch-cc-menu">
+                <button
+                  type="button"
+                  className="watch-cc-menu-item"
+                  onClick={() => {
+                    setSelectedSubtitleIndex(null);
+                    setSubtitleMenuOpen(false);
+                  }}
+                >
+                  Off
+                </button>
+                {subtitles.map(({ index, label }) => (
+                  <button
+                    key={index}
+                    type="button"
+                    className="watch-cc-menu-item"
+                    onClick={() => {
+                      setSelectedSubtitleIndex(index);
+                      setSubtitleMenuOpen(false);
+                    }}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -435,18 +435,22 @@ button {
 
 .row-arrow {
   position: absolute;
-  top: 0;
-  bottom: 0;
-  width: 44px;
+  top: 50%;
+  transform: translateY(-50%);
   z-index: 3;
+  width: auto;
+  min-width: 44px;
+  padding: 0.6rem 0.4rem;
   background: rgba(20, 20, 20, 0.7);
   color: #fff;
-  font-size: 1.5rem;
+  font-size: 2.1rem;
   display: flex;
   align-items: center;
   justify-content: center;
   opacity: 0;
-  transition: opacity 0.2s;
+  border: none;
+  cursor: pointer;
+  transition: opacity 0.25s ease, background 0.2s ease, transform 0.15s ease;
 }
 
 .row-wrapper:hover .row-arrow {
@@ -461,6 +465,16 @@ button {
 .row-arrow-right {
   right: 0;
   border-radius: var(--radius) 0 0 var(--radius);
+}
+
+.row-arrow:hover {
+  background: rgba(40, 40, 40, 0.9);
+  transform: translateY(-50%) scale(1.05);
+}
+
+.row-arrow:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
 }
 
 /* ===== Cards ===== */
@@ -704,61 +718,81 @@ button {
   padding: 0.5rem 0.8rem;
 }
 
-.watch-subtitle-select {
+.watch-bottom-bar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 0.5rem 0 3rem;
+  z-index: 201;
+  opacity: 0;
+  transition: opacity 0.3s;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.75), transparent);
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  margin-left: 1.5rem;
+  justify-content: flex-end;
+  pointer-events: none;
 }
 
-.subtitle-label {
-  color: rgba(255, 255, 255, 0.9);
-  font-size: 0.9rem;
+.watch-bottom-bar.visible {
+  opacity: 1;
 }
 
-.subtitle-dropdown {
+/* Only the CC control receives clicks; rest of bar does not block native controls */
+.watch-cc-wrap {
   position: relative;
+  margin-right: 5.5rem;
+  pointer-events: auto;
 }
 
-.subtitle-toggle {
-  background: rgba(255, 255, 255, 0.1);
+.watch-cc-btn {
+  background: transparent;
   color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.5);
   border-radius: var(--radius);
-  padding: 0.35rem 0.9rem;
+  padding: 0.4rem 0.75rem;
   font-size: 0.9rem;
-  border: 1px solid rgba(255, 255, 255, 0.25);
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s;
 }
 
-.subtitle-toggle:hover,
-.subtitle-toggle:focus {
-  background: rgba(255, 255, 255, 0.2);
+.watch-cc-btn:hover,
+.watch-cc-btn:focus-visible {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.8);
   outline: none;
 }
 
-.subtitle-menu {
+.watch-cc-menu {
   position: absolute;
-  top: 110%;
-  left: 0;
-  min-width: 12rem;
-  background: rgba(20, 20, 20, 0.95);
+  bottom: 100%;
+  right: 0;
+  margin-bottom: 0.35rem;
+  min-width: 14rem;
+  max-height: 16rem;
+  overflow-y: auto;
+  background: rgba(20, 20, 20, 0.98);
   border-radius: var(--radius);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.7);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
   padding: 0.25rem 0;
   z-index: 300;
 }
 
-.subtitle-menu-item {
+.watch-cc-menu-item {
   display: block;
   width: 100%;
   text-align: left;
-  padding: 0.4rem 0.9rem;
+  padding: 0.5rem 1rem;
   background: transparent;
   color: #f5f5f5;
   font-size: 0.9rem;
+  border: none;
+  cursor: pointer;
 }
 
-.subtitle-menu-item:hover {
-  background: rgba(255, 255, 255, 0.07);
+.watch-cc-menu-item:hover {
+  background: rgba(255, 255, 255, 0.1);
 }
 
 .video-player {

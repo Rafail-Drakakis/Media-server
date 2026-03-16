@@ -16,7 +16,14 @@ export default function Row({ title, items, progressMap, onRemove }) {
     <div className="row-section">
       <h2 className="row-title">{title}</h2>
       <div className="row-wrapper">
-        <button className="row-arrow row-arrow-left" onClick={() => scroll('left')}>&#10094;</button>
+        <button
+          type="button"
+          className="row-arrow row-arrow-left"
+          onClick={() => scroll('left')}
+          aria-label="Scroll left"
+        >
+          &#10094;
+        </button>
         <div className="row-items" ref={rowRef}>
           {items.map(item => (
             <Card
@@ -27,7 +34,14 @@ export default function Row({ title, items, progressMap, onRemove }) {
             />
           ))}
         </div>
-        <button className="row-arrow row-arrow-right" onClick={() => scroll('right')}>&#10095;</button>
+        <button
+          type="button"
+          className="row-arrow row-arrow-right"
+          onClick={() => scroll('right')}
+          aria-label="Scroll right"
+        >
+          &#10095;
+        </button>
       </div>
     </div>
   );
