@@ -718,31 +718,131 @@ button {
   padding: 0.5rem 0.8rem;
 }
 
+.watch-video-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
 .watch-bottom-bar {
   position: absolute;
   bottom: 0;
   left: 0;
   right: 0;
-  padding: 0.5rem 0 3rem;
+  padding: 0.5rem 1rem 2rem;
   z-index: 201;
   opacity: 0;
   transition: opacity 0.3s;
   background: linear-gradient(to top, rgba(0, 0, 0, 0.75), transparent);
   display: flex;
   align-items: center;
-  justify-content: flex-end;
-  pointer-events: none;
+  gap: 0.75rem;
+  flex-wrap: wrap;
 }
 
 .watch-bottom-bar.visible {
   opacity: 1;
 }
 
-/* Only the CC control receives clicks; rest of bar does not block native controls */
+.watch-ctrl-btn {
+  background: transparent;
+  color: #fff;
+  border: none;
+  padding: 0.4rem;
+  font-size: 1.25rem;
+  cursor: pointer;
+  border-radius: var(--radius);
+  transition: background 0.2s;
+  flex-shrink: 0;
+}
+
+.watch-ctrl-btn:hover,
+.watch-ctrl-btn:focus-visible {
+  background: rgba(255, 255, 255, 0.2);
+  outline: none;
+}
+
+.watch-time {
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.9);
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+}
+
+.watch-seek {
+  flex: 1;
+  min-width: 80px;
+  height: 0.5rem;
+  -webkit-appearance: none;
+  appearance: none;
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 2px;
+  cursor: pointer;
+}
+
+.watch-seek::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--accent);
+  cursor: pointer;
+}
+
+.watch-seek::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--accent);
+  cursor: pointer;
+  border: none;
+}
+
+.watch-controls-right {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
+.watch-volume-wrap {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.watch-volume {
+  width: 5rem;
+  height: 0.35rem;
+  -webkit-appearance: none;
+  appearance: none;
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 2px;
+  cursor: pointer;
+}
+
+.watch-volume::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #fff;
+  cursor: pointer;
+}
+
+.watch-volume::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #fff;
+  cursor: pointer;
+  border: none;
+}
+
 .watch-cc-wrap {
   position: relative;
-  margin-right: 5.5rem;
-  pointer-events: auto;
 }
 
 .watch-cc-btn {
@@ -795,10 +895,12 @@ button {
   background: rgba(255, 255, 255, 0.1);
 }
 
-.video-player {
+.watch-video-container .video-player {
   width: 100%;
   height: 100%;
   outline: none;
+  object-fit: contain;
+  display: block;
 }
 
 /* Netflix-style subtitles: white text, black outline, no box */
