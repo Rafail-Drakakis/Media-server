@@ -5,18 +5,21 @@ A self-hosted Netflix-like app for streaming movies and series from your externa
 ## Prerequisites
 
 - **Node.js** 18+ (recommended: 20+)
-- External HDD mounted at a known path
+- npm 9+ (bundled with recent Node versions)
+- External HDD mounted at a known path (this will be your `MEDIA_ROOT`)
 
-## Quick Start
+## Quick Start (Development)
 
 ### 1. Backend
+
+From the repo root:
 
 ```bash
 cd backend
 npm install
 ```
 
-Edit `.env` to set your `MEDIA_ROOT` (path to your external HDD media folder):
+Create a `.env` file inside the `backend` folder and set at least:
 
 ```env
 TMDB_API_KEY=your_tmdb_api_key
@@ -25,13 +28,21 @@ MEDIA_ROOT=/mnt/external/media
 PORT=3001
 ```
 
-Start the backend:
+- **TMDB_API_KEY**: create a free API key from TMDB.
+- **MEDIA_ROOT**: absolute path to the folder where your movies/series live (can be on an external HDD).
+- **PORT**: API port. The frontend dev server proxies `/api` to `http://localhost:3001`, so if you change this, also update the Vite config.
+
+Start the backend in watch mode:
 
 ```bash
 npm run dev
 ```
 
+This will start the API at `http://localhost:3001`.
+
 ### 2. Frontend
+
+In a second terminal, from the repo root:
 
 ```bash
 cd frontend
@@ -39,9 +50,30 @@ npm install
 npm run dev
 ```
 
-Open http://localhost:5173 in your browser.
+Open `http://localhost:5173` in your browser.
 
-### 3. Usage
+During development, all requests to `/api/*` from the frontend are proxied to the backend (`http://localhost:3001`).
+
+## Production Build (optional)
+
+If you want to build the frontend for production:
+
+```bash
+cd frontend
+npm run build
+# Optionally preview the built app
+npm run preview
+```
+
+For the backend, you can run it without file watching:
+
+```bash
+cd backend
+npm install
+npm start
+```
+
+## Usage
 
 1. **Register** a new account
 2. Click **Scan Library** to scan your media folder
