@@ -8,6 +8,9 @@ export default function Watch() {
   const videoRef = useRef(null);
   const [progress, setProgress] = useState(null);
   const [showControls, setShowControls] = useState(true);
+  const [subtitles, setSubtitles] = useState([]);
+  const [selectedSubtitleIndex, setSelectedSubtitleIndex] = useState(null);
+  const [subtitleMenuOpen, setSubtitleMenuOpen] = useState(false);
   const hideTimer = useRef(null);
   const saveTimer = useRef(null);
 
@@ -16,6 +19,12 @@ export default function Watch() {
       const p = list.find(x => String(x.media_id) === String(mediaId));
       if (p) setProgress(p);
     }).catch(console.error);
+  }, [mediaId]);
+
+  useEffect(() => {
+    api.getSubtitles(mediaId)
+      .then(list => setSubtitles(list))
+      .catch(() => setSubtitles([]));
   }, [mediaId]);
 
   useEffect(() => {
@@ -55,6 +64,7 @@ export default function Watch() {
   }
 
   const token = localStorage.getItem('token');
+  const hasSubtitles = subtitles.length > 0;
 
   return (
     <div
@@ -63,6 +73,49 @@ export default function Watch() {
     >
       <div className={`watch-top-bar ${showControls ? 'visible' : ''}`}>
         <button className="btn-back" onClick={handleBack}>&#10094; Back</button>
+        {hasSubtitles && (
+          <div className="watch-subtitle-select">
+            <span className="subtitle-label">Subtitles</span>
+            <div className="subtitle-dropdown">
+              <button
+                type="button"
+                className="subtitle-toggle"
+                onClick={() => setSubtitleMenuOpen(prev => !prev)}
+              >
+                {selectedSubtitleIndex === null
+                  ? 'Off'
+                  : (subtitles.find(s => s.index === selectedSubtitleIndex)?.label ?? 'Subtitle')}
+              </button>
+              {subtitleMenuOpen && (
+                <div className="subtitle-menu">
+                  <button
+                    type="button"
+                    className="subtitle-menu-item"
+                    onClick={() => {
+                      setSelectedSubtitleIndex(null);
+                      setSubtitleMenuOpen(false);
+                    }}
+                  >
+                    Off
+                  </button>
+                  {subtitles.map(({ index, label }) => (
+                    <button
+                      key={index}
+                      type="button"
+                      className="subtitle-menu-item"
+                      onClick={() => {
+                        setSelectedSubtitleIndex(index);
+                        setSubtitleMenuOpen(false);
+                      }}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </div>
       <video
         ref={videoRef}
@@ -72,7 +125,18 @@ export default function Watch() {
         autoPlay
         onPause={saveProgress}
         onEnded={saveProgress}
-      />
+      >
+        {hasSubtitles && selectedSubtitleIndex !== null && (
+          <track
+            key={selectedSubtitleIndex}
+            kind="subtitles"
+            src={api.subtitleUrl(mediaId, selectedSubtitleIndex)}
+            srcLang="en"
+            label={subtitles.find(s => s.index === selectedSubtitleIndex)?.label ?? 'Subtitle'}
+            default
+          />
+        )}
+      </video>
     </div>
   );
 }

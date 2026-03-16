@@ -88,6 +88,7 @@ npm start
 - Search across your library
 - Genre-based browsing
 - Video streaming with seek support (range requests)
+- **Subtitle support**: place `.srt` or `.vtt` files in the same folder as a video; choose which track to use from the watch page
 - Netflix-like dark UI
 
 ## Media Organization
@@ -108,3 +109,5 @@ Show.Name.S01E01.Episode.Title.mkv
 ```
 
 Supported formats: `.mp4`, `.mkv`, `.avi`, `.webm`, `.mov`, `.m4v`, `.wmv`, `.flv`, `.ts`
+
+**Subtitles:** Put `.srt` or `.vtt` files in the same folder as the video (e.g. `Movie Name (2020)/Movie Name (2020).en.srt`). On the watch page, use the "Subtitles" dropdown to pick which track to show.

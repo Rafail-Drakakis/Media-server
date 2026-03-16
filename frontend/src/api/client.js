@@ -74,6 +74,10 @@ export const api = {
 
   streamUrl: (mediaId) => `/api/stream/${mediaId}?token=${getToken()}`,
 
+  getSubtitles: (mediaId) => request(`/stream/${mediaId}/subtitles`),
+  subtitleUrl: (mediaId, index) =>
+    `${API_BASE}/stream/${mediaId}/subtitles/${index}?format=vtt&token=${getToken()}`,
+
   launchInVLC: (mediaId, startTime = 0) =>
     request(`/launch/${mediaId}`, { method: 'POST', body: { startTime } }),
 
