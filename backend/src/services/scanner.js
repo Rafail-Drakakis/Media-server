@@ -42,6 +42,7 @@ const NUMBERED_PREFIX_RE = /^(\d{1,3})\s*[-–.]\s*/;
 const FOLDER_TYPE_MAP = {
   'movies': 'movie',
   'series': 'series',
+  'kids shows': 'series',
   'concerts': 'concert',
   'documentaries': 'documentary',
   'podcasts': 'podcast',

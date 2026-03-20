@@ -95,6 +95,8 @@ npm start
 
 The scanner supports these naming conventions:
 
+Recognized top-level folders under `MEDIA_ROOT` include: `Movies`, `Series`, `Kids shows`, `Podcasts`, `Talks`, `Performances`, and `Stand up`.
+
 **Movies:**
 ```
 Movie Name (2020)/Movie Name (2020).mp4

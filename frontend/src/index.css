@@ -726,6 +726,25 @@ button {
   flex-direction: column;
 }
 
+.watch-playback-error {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 202;
+  background: rgba(0, 0, 0, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: var(--radius);
+  padding: 1rem 1.1rem;
+  text-align: center;
+  max-width: min(92vw, 520px);
+}
+
+.watch-playback-error p {
+  margin: 0 0 0.75rem;
+  color: #fff;
+}
+
 .watch-bottom-bar {
   position: absolute;
   bottom: 0;
