@@ -64,6 +64,12 @@ router.get('/search', (req, res) => {
   res.json(shows.map(formatShow));
 });
 
+router.get('/media/:id', (req, res) => {
+  const media = db.prepare('SELECT * FROM media_items WHERE id = ?').get(req.params.id);
+  if (!media) return res.status(404).json({ error: 'Not found' });
+  res.json(media);
+});
+
 router.get('/:id', (req, res) => {
   const show = db.prepare('SELECT * FROM shows WHERE id = ?').get(req.params.id);
   if (!show) return res.status(404).json({ error: 'Not found' });

@@ -57,6 +57,7 @@ export const api = {
     const qs = new URLSearchParams(params).toString();
     return request(`/library${qs ? `?${qs}` : ''}`);
   },
+  getMedia: (id) => request(`/library/media/${id}`),
   getShow: (id) => request(`/library/${id}`),
   searchLibrary: (q) => request(`/library/search?q=${encodeURIComponent(q)}`),
   getTypes: () => request('/library/types'),

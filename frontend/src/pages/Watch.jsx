@@ -26,6 +26,7 @@ export default function Watch() {
   const [selectedSubtitleIndex, setSelectedSubtitleIndex] = useState(null);
   const [subtitleMenuOpen, setSubtitleMenuOpen] = useState(false);
   const [playbackError, setPlaybackError] = useState('');
+  const [nextEpisodeId, setNextEpisodeId] = useState(null);
   const hideTimer = useRef(null);
   const saveTimer = useRef(null);
 
@@ -40,6 +41,32 @@ export default function Watch() {
     api.getSubtitles(mediaId)
       .then(list => setSubtitles(list))
       .catch(() => setSubtitles([]));
+  }, [mediaId]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadNextEpisode() {
+      try {
+        const media = await api.getMedia(mediaId);
+        if (!media?.show_id) {
+          if (!cancelled) setNextEpisodeId(null);
+          return;
+        }
+        const show = await api.getShow(media.show_id);
+        const episodes = Array.isArray(show?.episodes) ? show.episodes : [];
+        const currentIndex = episodes.findIndex(ep => String(ep.id) === String(mediaId));
+        const nextEpisode = currentIndex >= 0 ? episodes[currentIndex + 1] : null;
+        if (!cancelled) setNextEpisodeId(nextEpisode ? nextEpisode.id : null);
+      } catch {
+        if (!cancelled) setNextEpisodeId(null);
+      }
+    }
+
+    loadNextEpisode();
+    return () => {
+      cancelled = true;
+    };
   }, [mediaId]);
 
   useEffect(() => {
@@ -163,6 +190,15 @@ export default function Watch() {
     }
   }
 
+  function handleNextEpisode() {
+    if (!nextEpisodeId) return;
+    saveProgress();
+    setSelectedSubtitleIndex(null);
+    setSubtitleMenuOpen(false);
+    setPlaybackError('');
+    navigate(`/watch/${nextEpisodeId}`, { replace: true });
+  }
+
   const SEEK_SECONDS = 5;
 
   useEffect(() => {
@@ -250,6 +286,17 @@ export default function Watch() {
             aria-label="Seek"
           />
           <div className="watch-controls-right">
+            {nextEpisodeId && (
+              <button
+                type="button"
+                className="watch-ctrl-btn"
+                onClick={handleNextEpisode}
+                aria-label="Next episode"
+                title="Next episode"
+              >
+                Next Ep
+              </button>
+            )}
             <div className="watch-volume-wrap">
               <button
                 type="button"
