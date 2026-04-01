@@ -22,7 +22,6 @@ async function start() {
   const { default: progressRoutes } = await import('./routes/progress.js');
   const { default: watchlistRoutes } = await import('./routes/watchlist.js');
   const { default: streamRoutes } = await import('./routes/stream.js');
-  const { default: launchRoutes } = await import('./routes/launch.js');
   const { default: thumbnailRoutes } = await import('./routes/thumbnail.js');
 
   const app = express();
@@ -35,7 +34,6 @@ async function start() {
   app.use('/api/progress', progressRoutes);
   app.use('/api/watchlist', watchlistRoutes);
   app.use('/api/stream', streamRoutes);
-  app.use('/api/launch', launchRoutes);
   app.use('/api/thumbnail', thumbnailRoutes);
 
   app.get('/api/health', (_req, res) => res.json({ ok: true }));

@@ -180,16 +180,6 @@ export default function Watch() {
     navigate(-1);
   }
 
-  async function handleLaunchVLC() {
-    try {
-      const v = videoRef.current;
-      const startTime = v && Number.isFinite(v.currentTime) ? v.currentTime : 0;
-      await api.launchInVLC(Number(mediaId), startTime);
-    } catch (err) {
-      setPlaybackError(err?.message || 'Failed to launch VLC');
-    }
-  }
-
   function handleNextEpisode() {
     if (!nextEpisodeId) return;
     saveProgress();
@@ -238,7 +228,7 @@ export default function Watch() {
           src={`/api/stream/${mediaId}?token=${token}`}
           autoPlay
           onLoadedData={() => setPlaybackError('')}
-          onError={() => setPlaybackError('This video format may not be supported by your browser. Try VLC.')}
+          onError={() => setPlaybackError('This video format may not be supported by your browser.')}
           onPause={saveProgress}
           onEnded={saveProgress}
           onClick={togglePlay}
@@ -257,9 +247,6 @@ export default function Watch() {
         {playbackError && (
           <div className="watch-playback-error">
             <p>{playbackError}</p>
-            <button type="button" className="btn-vlc" onClick={handleLaunchVLC}>
-              ▶ VLC
-            </button>
           </div>
         )}
         <div className={`watch-bottom-bar ${showControls ? 'visible' : ''}`}>
