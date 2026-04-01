@@ -1,48 +1,90 @@
 # Media-server
 
-A self-hosted Netflix-like app for streaming movies and series from your external HDD.
+A self-hosted Netflix-like app that scans a local/external media library, enriches it with metadata, and streams it in a browser.
+
+## What This Project Does
+
+- Scans your local media folders and builds a library database
+- Detects movies, series, documentaries, podcasts, talks, concerts, performances, and stand-up
+- Fetches metadata from TMDB where applicable (title, poster, backdrop, rating, genres, overview)
+- Streams video with range requests (seek support)
+- Supports subtitles (`.srt`, `.vtt`) with on-the-fly SRT -> VTT conversion for web playback
+- Tracks watch progress per user and supports "Continue Watching"
+- Supports per-user watchlists ("My List")
+- Generates local thumbnails for content without TMDB posters (from local artwork or `ffmpeg` frame capture)
+
+## Tech Stack
+
+- Frontend: React + React Router + Vite
+- Backend: Express (Node.js, ESM)
+- Database: `sql.js` (SQLite stored in `backend/data.db`)
+- Auth: JWT + bcrypt password hashing
+
+## Project Structure
+
+```text
+.
+├─ backend/
+│  ├─ src/
+│  │  ├─ routes/        # auth, library, progress, watchlist, stream, thumbnail
+│  │  ├─ services/      # scanner, tmdb integration, thumbnail generation
+│  │  ├─ db/            # schema + db initialization
+│  │  └─ middleware/    # auth middleware
+│  ├─ data.db           # created automatically
+│  └─ package.json
+├─ frontend/
+│  ├─ src/              # pages, components, API client, auth context
+│  └─ package.json
+└─ README.md
+```
 
 ## Prerequisites
 
-- **Node.js** 18+ (recommended: 20+)
-- npm 9+ (bundled with recent Node versions)
-- External HDD mounted at a known path (this will be your `MEDIA_ROOT`)
+- Node.js 18+ (Node.js 20+ recommended)
+- npm 9+
+- A mounted local/external media folder (used as `MEDIA_ROOT`)
+- `ffmpeg` (recommended; used for thumbnail extraction fallback)
+
+### Install ffmpeg (Linux example)
+
+```bash
+sudo apt update
+sudo apt install -y ffmpeg
+```
+
+## Environment Variables
+
+Create `backend/.env`:
+
+```env
+TMDB_API_KEY=your_tmdb_api_key
+JWT_SECRET=replace-with-strong-random-secret
+MEDIA_ROOT=/absolute/path/to/your/media
+PORT=3001
+```
+
+- `TMDB_API_KEY`: TMDB API key for metadata enrichment (`movie`, `series`, and some documentaries)
+- `JWT_SECRET`: secret used to sign auth tokens (change from defaults for real usage)
+- `MEDIA_ROOT`: absolute path to your library root
+- `PORT`: backend port (default `3001`)
+
+Frontend does not require env vars for local development by default. It proxies `/api` to `http://localhost:3001`.
 
 ## Quick Start (Development)
 
-### 1. Backend
-
-From the repo root:
+### 1) Backend
 
 ```bash
 cd backend
 npm install
-```
-
-Create a `.env` file inside the `backend` folder and set at least:
-
-```env
-TMDB_API_KEY=your_tmdb_api_key
-JWT_SECRET=your_secret
-MEDIA_ROOT=/mnt/external/media
-PORT=3001
-```
-
-- **TMDB_API_KEY**: create a free API key from TMDB.
-- **MEDIA_ROOT**: absolute path to the folder where your movies/series live (can be on an external HDD).
-- **PORT**: API port. The frontend dev server proxies `/api` to `http://localhost:3001`, so if you change this, also update the Vite config.
-
-Start the backend in watch mode:
-
-```bash
 npm run dev
 ```
 
-This will start the API at `http://localhost:3001`.
+Backend will run on `http://localhost:3001`.
 
-### 2. Frontend
+### 2) Frontend
 
-In a second terminal, from the repo root:
+Open a second terminal:
 
 ```bash
 cd frontend
@@ -50,22 +92,11 @@ npm install
 npm run dev
 ```
 
-Open `http://localhost:5173` in your browser.
+Frontend will run on `http://localhost:5173`.
 
-During development, all requests to `/api/*` from the frontend are proxied to the backend (`http://localhost:3001`).
+## Production / Non-watch Run
 
-## Production Build (optional)
-
-If you want to build the frontend for production:
-
-```bash
-cd frontend
-npm run build
-# Optionally preview the built app
-npm run preview
-```
-
-For the backend, you can run it without file watching:
+Backend:
 
 ```bash
 cd backend
@@ -73,43 +104,145 @@ npm install
 npm start
 ```
 
-## Usage
+Frontend build:
 
-1. **Register** a new account
-2. Click **Scan Library** to scan your media folder
-3. The app will fetch metadata (posters, descriptions, genres) from TMDB
-4. Browse, search, and watch your media
-
-## Features
-
-- Multi-user authentication with separate watchlists
-- Automatic metadata fetching from TMDB (posters, descriptions, ratings, genres)
-- Continue watching with progress tracking
-- Search across your library
-- Genre-based browsing
-- Video streaming with seek support (range requests)
-- **Subtitle support**: place `.srt` or `.vtt` files in the same folder as a video; choose which track to use from the watch page
-- Netflix-like dark UI
-
-## Media Organization
-
-The scanner supports these naming conventions:
-
-Recognized top-level folders under `MEDIA_ROOT` include: `Movies`, `Series`, `Kids shows`, `Podcasts`, `Talks`, `Performances`, and `Stand up`.
-
-**Movies:**
-```
-Movie Name (2020)/Movie Name (2020).mp4
-Movie.Name.2020.mp4
+```bash
+cd frontend
+npm run build
+npm run preview
 ```
 
-**Series:**
-```
-Show Name/Season 01/Show.Name.S01E01.mp4
-Show Name/Show.Name.S01E01.mp4
-Show.Name.S01E01.Episode.Title.mkv
+## First-Time Usage Flow
+
+1. Register an account
+2. Sign in
+3. Open Home and click **Scan Library**
+4. Browse content rows by type and genre
+5. Open a title -> Play media
+6. Add/remove items from **My List** as needed
+
+## Media Library Organization
+
+The scanner walks all subfolders under `MEDIA_ROOT` and recognizes these top-level folder names:
+
+- `Movies` -> `movie`
+- `Series` -> `series`
+- `Kids shows` -> `series`
+- `Concerts` -> `concert`
+- `Documentaries` -> `documentary`
+- `Podcasts` -> `podcast`
+- `Talks` -> `talk`
+- `Performances` -> `performance`
+- `Stand up` -> `standup`
+
+Unknown top-level folders are treated as movie-style content.
+
+### Supported video formats
+
+`.mp4`, `.mkv`, `.avi`, `.webm`, `.mov`, `.m4v`, `.wmv`, `.flv`, `.ts`
+
+### Example naming patterns
+
+Movies:
+
+```text
+Movies/Movie Name (2020)/Movie Name (2020).mp4
+Movies/Movie.Name.2020.mkv
 ```
 
-Supported formats: `.mp4`, `.mkv`, `.avi`, `.webm`, `.mov`, `.m4v`, `.wmv`, `.flv`, `.ts`
+Series:
 
-**Subtitles:** Put `.srt` or `.vtt` files in the same folder as the video (e.g. `Movie Name (2020)/Movie Name (2020).en.srt`). On the watch page, use the "Subtitles" dropdown to pick which track to show.
+```text
+Series/Show Name/Season 01/Show.Name.S01E01.mp4
+Series/Show Name/Show.Name.S01E02.mkv
+Series/Show Name/1 - Pilot.mp4
+```
+
+Episode number parsing supports patterns like:
+
+- `S01E02`
+- `Episode 2`
+- `Επεισόδιο 2`
+- Leading numbered prefix (`1 - ...`)
+
+### Subtitles
+
+Place subtitle files in the same folder as the video:
+
+- Supported subtitle formats: `.srt`, `.vtt`
+- In player UI, click `CC` and choose a subtitle track
+- `.srt` is converted to VTT on request for browser compatibility
+
+## Functional Overview
+
+### Authentication
+
+- `POST /api/auth/register`
+- `POST /api/auth/login`
+- `GET /api/auth/me`
+- JWT-based auth (`Authorization: Bearer <token>`)
+
+### Library
+
+- `POST /api/library/scan` scans disk, updates DB, deduplicates entries, removes deleted files
+- `GET /api/library` lists shows (optional filters: `type`, `genre`, `limit`)
+- `GET /api/library/types` returns available media types
+- `GET /api/library/genres` returns discovered genres
+- `GET /api/library/search?q=...` title/overview search
+- `GET /api/library/:id` show details + episodes/media items
+- `GET /api/library/media/:id` raw media item record
+
+### Playback & Subtitles
+
+- `GET /api/stream/:id` streams file with range support
+- `GET /api/stream/:id/subtitles` lists subtitle tracks
+- `GET /api/stream/:id/subtitles/:index?format=vtt` returns subtitle file
+
+### Progress
+
+- `GET /api/progress` list user progress rows
+- `PUT /api/progress` upsert progress (`mediaId`, `positionSeconds`, `durationSeconds`)
+- `DELETE /api/progress/:mediaId` remove progress entry
+
+For series, saving progress on one episode clears progress for other episodes of the same show (single active "continue" item per series).
+
+### Watchlist
+
+- `GET /api/watchlist`
+- `POST /api/watchlist`
+- `DELETE /api/watchlist/:showId`
+
+### Thumbnails
+
+- `GET /api/thumbnail/:showId` serves generated fallback thumbnail
+- For items without TMDB posters:
+  - Prefer local image files near the video (`poster`, `cover`, `folder`, etc.)
+  - Otherwise extract a frame via `ffmpeg`
+
+## Useful Notes
+
+- Database file: `backend/data.db`
+- The backend periodically persists DB state and also writes after mutation queries
+- On startup, backend removes `${MEDIA_ROOT}/.Trash-1000` if present
+- Frontend auto-redirects to login on `401` responses
+- Player supports keyboard seek:
+  - Left arrow: -5 seconds
+  - Right arrow: +5 seconds
+
+## Troubleshooting
+
+- `Scan failed: MEDIA_ROOT does not exist`
+  - Verify `MEDIA_ROOT` in `backend/.env` is an absolute, mounted path
+- No posters/metadata
+  - Verify `TMDB_API_KEY`; non-TMDB categories intentionally skip TMDB lookup
+- Thumbnails missing for local/non-TMDB content
+  - Install `ffmpeg`; or place local artwork files (`.jpg/.jpeg/.png/.webp`) in video folder
+- Frontend cannot reach backend
+  - Ensure backend runs on the port expected by `frontend/vite.config.js` proxy (`3001` by default)
+
+## Security / Deployment Recommendations
+
+- Use a strong `JWT_SECRET`
+- Do not expose this app directly to the internet without a reverse proxy and HTTPS
+- Keep `backend/.env` private and out of version control
+- If deploying on a home server, restrict network access to trusted devices/users
