@@ -54,12 +54,12 @@ sudo apt install -y ffmpeg
 
 ## Environment Variables
 
-Create `backend/.env`:
+### Current `backend/.env` (from this repo)
 
 ```env
-TMDB_API_KEY=your_tmdb_api_key
-JWT_SECRET=replace-with-strong-random-secret
-MEDIA_ROOT=/absolute/path/to/your/media
+TMDB_API_KEY=6d2d5e3e73ee3ef2e98b10d9414ef09f
+JWT_SECRET=personal-netflix-super-secret-key-change-me
+MEDIA_ROOT=/media/rafail/Files/Media
 PORT=3001
 ```
 
@@ -68,7 +68,13 @@ PORT=3001
 - `MEDIA_ROOT`: absolute path to your library root
 - `PORT`: backend port (default `3001`)
 
-Frontend does not require env vars for local development by default. It proxies `/api` to `http://localhost:3001`.
+### Current `frontend/.env` (from this repo)
+
+```env
+VITE_APP_NAME=Netflix for pepe
+```
+
+Frontend proxies `/api` to `http://localhost:3001` in development.
 
 ## Quick Start (Development)
 
