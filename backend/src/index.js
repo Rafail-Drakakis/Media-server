@@ -23,11 +23,13 @@ async function start() {
   const { default: watchlistRoutes } = await import('./routes/watchlist.js');
   const { default: streamRoutes } = await import('./routes/stream.js');
   const { default: thumbnailRoutes } = await import('./routes/thumbnail.js');
+  const { default: metadataAssetRoutes } = await import('./routes/metadata-asset.js');
 
   const app = express();
 
   app.use(cors({ origin: true, credentials: true }));
   app.use(express.json());
+  app.use('/api/metadata-asset', metadataAssetRoutes);
 
   app.use('/api/auth', authRoutes);
   app.use('/api/library', libraryRoutes);

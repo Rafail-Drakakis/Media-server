@@ -5,11 +5,14 @@ export default function Hero({ show }) {
   if (!show) return null;
 
   const bgImage = show.backdrop_path || show.poster_path;
+  const backgroundStyle = bgImage
+    ? { backgroundImage: `url("${encodeURI(bgImage)}")` }
+    : undefined;
 
   return (
     <div
       className="hero"
-      style={bgImage ? { backgroundImage: `url(${bgImage})` } : undefined}
+      style={backgroundStyle}
     >
       <div className="hero-overlay" />
       <div className="hero-content">

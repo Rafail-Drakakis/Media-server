@@ -2,11 +2,6 @@ import fs from 'fs';
 import path from 'path';
 import { config } from '../config.js';
 import db from '../db/index.js';
-import {
-  searchMovie, searchTV,
-  getMovieDetails, getTVDetails,
-  posterUrl, backdropUrl,
-} from './tmdb.js';
 import { generateShowThumbnail } from './thumbnail.js';
 
 const VIDEO_EXTENSIONS = new Set([
@@ -37,6 +32,9 @@ const GREEK_EP_RE = /Επεισόδιο\s+(\d+)/;
 const ENGLISH_EP_RE = /[Ee]pisode\s+(\d+)/;
 const SEASON_FOLDER_RE = /^[Ss]eason\s*(\d+)$/;
 const YEAR_RE = /[\(\[]?((?:19|20)\d{2})[\)\]]?/;
+const TRAILING_YEAR_CAPTURE_RE = /[\(\[]((?:19|20)\d{2})[\)\]]\s*(?:\.\w{2,4})?$/;
+const TRAILING_BRACKET_YEAR_RE = /[\s._-]*[\(\[](?:19|20)\d{2}[\)\]]\s*$/;
+const TRAILING_PLAIN_YEAR_RE = /\s(?:19|20)\d{2}\s*$/;
 const NUMBERED_PREFIX_RE = /^(\d{1,3})\s*[-–.]\s*/;
 
 const FOLDER_TYPE_MAP = {
@@ -53,13 +51,164 @@ const FOLDER_TYPE_MAP = {
 
 const EPISODE_TYPES = new Set(['series', 'podcast', 'documentary']);
 
+function normalizePathKey(value) {
+  return String(value || '').replace(/\\/g, '/').trim();
+}
+
+function normalizeArtworkPaths(posterPath, backdropPath) {
+  const poster = String(posterPath || '').trim();
+  const backdrop = String(backdropPath || '').trim();
+  if (poster && backdrop) return { posterPath: poster, backdropPath: backdrop };
+  if (poster) return { posterPath: poster, backdropPath: poster };
+  if (backdrop) return { posterPath: backdrop, backdropPath: backdrop };
+  return { posterPath: '', backdropPath: '' };
+}
+
+/** Poster/backdrop paths must live under a `metadata` directory (relative to MEDIA_ROOT). */
+function localMediaMetadataAssetUrl(relativeFromMediaRoot) {
+  const rel = normalizePathKey(relativeFromMediaRoot);
+  if (!rel || !rel.includes('/metadata/')) return '';
+  return `/api/metadata-asset/${rel}`;
+}
+
+/**
+ * Resolve `images.poster` / `images.backdrop` from sidecar JSON to a URL or empty string.
+ * Accepts full MEDIA_ROOT-relative paths with `/metadata/`, or `metadata/...` / bare filenames under the movie folder.
+ */
+function resolveSidecarImageRel(movieDirRel, imageRef) {
+  if (!imageRef || typeof imageRef !== 'string') return '';
+  const t = imageRef.trim();
+  if (/^https?:\/\//i.test(t)) return t;
+
+  const md = normalizePathKey(movieDirRel);
+  let rel = normalizePathKey(t.replace(/^\.\//, ''));
+  if (!rel) return '';
+
+  let fullRel;
+  if (rel.includes('/metadata/')) {
+    fullRel = rel;
+  } else if (rel.startsWith('metadata/')) {
+    fullRel = normalizePathKey(path.posix.join(md, rel));
+  } else if (!rel.includes('/')) {
+    fullRel = normalizePathKey(path.posix.join(md, 'metadata', rel));
+  } else {
+    fullRel = normalizePathKey(path.posix.join(md, rel));
+  }
+
+  return localMediaMetadataAssetUrl(fullRel);
+}
+
+function findLocalMetadataArtwork(movieDirRel) {
+  const relDir = normalizePathKey(movieDirRel);
+  if (!relDir) return { posterPath: '', backdropPath: '' };
+
+  const metadataRelDir = normalizePathKey(path.posix.join(relDir, 'metadata'));
+  const metadataAbsDir = path.join(config.mediaRoot, ...metadataRelDir.split('/').filter(Boolean));
+  let entries = [];
+  try {
+    entries = fs.readdirSync(metadataAbsDir, { withFileTypes: true });
+  } catch {
+    return { posterPath: '', backdropPath: '' };
+  }
+
+  let posterPath = '';
+  let backdropPath = '';
+  for (const entry of entries) {
+    if (!entry.isFile()) continue;
+    const ext = path.extname(entry.name).toLowerCase();
+    if (!ext) continue;
+    const base = path.basename(entry.name, ext).toLowerCase();
+    if (base === 'poster' && !posterPath) {
+      posterPath = localMediaMetadataAssetUrl(`${metadataRelDir}/${entry.name}`);
+    } else if (base === 'backdrop' && !backdropPath) {
+      backdropPath = localMediaMetadataAssetUrl(`${metadataRelDir}/${entry.name}`);
+    }
+  }
+
+  return normalizeArtworkPaths(posterPath, backdropPath);
+}
+
+function readMetadataBundle(metadataPath, { movieDirRel = '' } = {}) {
+  try {
+    const raw = fs.readFileSync(metadataPath, 'utf8');
+    const parsed = JSON.parse(raw);
+    const details = parsed?.metadata;
+    if (!details || typeof details !== 'object') return null;
+
+    const genres = Array.isArray(details.genres)
+      ? details.genres.map(g => (typeof g === 'string' ? g : g?.name)).filter(Boolean)
+      : [];
+
+    let artwork = findLocalMetadataArtwork(movieDirRel);
+    if (!artwork.posterPath || !artwork.backdropPath) {
+      let posterPath = '';
+      let backdropPath = '';
+      if (parsed?.images?.poster) {
+        posterPath = resolveSidecarImageRel(movieDirRel, parsed.images.poster);
+      }
+      if (parsed?.images?.backdrop) {
+        backdropPath = resolveSidecarImageRel(movieDirRel, parsed.images.backdrop);
+      }
+      const referencedArtwork = normalizeArtworkPaths(posterPath, backdropPath);
+      artwork = normalizeArtworkPaths(
+        artwork.posterPath || referencedArtwork.posterPath,
+        artwork.backdropPath || referencedArtwork.backdropPath
+      );
+    }
+
+    return {
+      tmdbId: parsed?.tmdb_id || details.id || null,
+      title: details.title || details.name || parsed?.title || '',
+      overview: details.overview || '',
+      posterPath: artwork.posterPath,
+      backdropPath: artwork.backdropPath,
+      releaseDate: details.release_date || details.first_air_date || '',
+      voteAverage: details.vote_average || 0,
+      genres: JSON.stringify(genres),
+    };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Load metadata from MEDIA_ROOT only: walk from the video's parent directory upward
+ * until .../metadata/metadata.json exists (at least library-type + one subfolder;
+ * flat movies under movies/*.mkv may use movies/metadata).
+ */
+function findLibrarySidecarMetadata(group) {
+  if (group.episodes.length === 0) return null;
+  const firstRel = normalizePathKey(group.episodes[0].relativePath);
+  let dir = path.posix.dirname(firstRel);
+
+  while (dir && dir !== '.') {
+    const segments = dir.split('/').filter(Boolean);
+    const depthOk = segments.length >= 2
+      || (segments.length === 1 && group.type === 'movie');
+    if (!depthOk) break;
+
+    const sidecarPath = path.join(config.mediaRoot, ...segments, 'metadata', 'metadata.json');
+    if (fs.existsSync(sidecarPath)) {
+      return readMetadataBundle(sidecarPath, { movieDirRel: dir });
+    }
+
+    const parent = path.posix.dirname(dir);
+    if (!parent || parent === dir) break;
+    dir = parent;
+  }
+
+  return null;
+}
+
 function cleanTitle(name) {
   return name
     .replace(/\.\w{2,4}$/, '')
     .replace(SXE_RE, '')
     .replace(GREEK_EP_RE, '')
     .replace(ENGLISH_EP_RE, '')
-    .replace(YEAR_RE, '')
+    // Remove trailing year metadata without stripping numeric-only titles (e.g. "1922").
+    .replace(TRAILING_BRACKET_YEAR_RE, '')
+    .replace(TRAILING_PLAIN_YEAR_RE, '')
     .replace(/[\._\-\[\]()]/g, ' ')
     .replace(/\s{2,}/g, ' ')
     .trim();
@@ -127,7 +276,8 @@ function parseFilePath(absPath) {
     };
   }
 
-  const yearMatch = filename.match(YEAR_RE);
+  const trailingYearMatch = filename.match(TRAILING_YEAR_CAPTURE_RE);
+  const yearMatch = trailingYearMatch || filename.match(YEAR_RE);
   const title = cleanTitle(filename);
   let year = yearMatch ? yearMatch[1] : null;
 
@@ -159,62 +309,37 @@ function groupByShow(parsed) {
   return [...groups.values()];
 }
 
-const SKIP_TMDB_TYPES = new Set(['podcast', 'talk', 'concert', 'performance', 'standup']);
-
 async function fetchShowMetadata(group) {
-  if (SKIP_TMDB_TYPES.has(group.type)) {
+  const firstRel = group.episodes[0]?.relativePath || '';
+  const baseDirRel = firstRel ? normalizePathKey(path.posix.dirname(firstRel)) : '';
+  const sidecar = findLibrarySidecarMetadata(group);
+  if (sidecar) {
+    const localArtwork = findLocalMetadataArtwork(baseDirRel);
+    const artwork = normalizeArtworkPaths(
+      localArtwork.posterPath || sidecar.posterPath,
+      localArtwork.backdropPath || sidecar.backdropPath
+    );
     return {
-      tmdbId: null,
-      title: group.title,
-      overview: '',
-      posterPath: '',
-      backdropPath: '',
-      releaseDate: '',
-      voteAverage: 0,
-      genres: '[]',
+      tmdbId: sidecar.tmdbId,
+      title: sidecar.title || group.title,
+      overview: sidecar.overview,
+      posterPath: artwork.posterPath,
+      backdropPath: artwork.backdropPath,
+      releaseDate: sidecar.releaseDate,
+      voteAverage: sidecar.voteAverage,
+      genres: sidecar.genres,
     };
   }
-
-  let tmdbResult, details;
-  const useTV = group.type === 'series'
-    || (group.type === 'documentary' && group.episodes.length > 1);
-
-  try {
-    if (useTV) {
-      tmdbResult = await searchTV(group.title, group.year);
-      if (tmdbResult) details = await getTVDetails(tmdbResult.id);
-    }
-    if (!details) {
-      tmdbResult = await searchMovie(group.title, group.year);
-      if (tmdbResult) details = await getMovieDetails(tmdbResult.id);
-    }
-  } catch (err) {
-    console.warn(`TMDB lookup failed for "${group.title}":`, err.message);
-  }
-
-  if (!details) {
-    return {
-      tmdbId: null,
-      title: group.title,
-      overview: '',
-      posterPath: '',
-      backdropPath: '',
-      releaseDate: '',
-      voteAverage: 0,
-      genres: '[]',
-    };
-  }
-
-  const genres = (details.genres || []).map(g => g.name);
+  const artwork = findLocalMetadataArtwork(baseDirRel);
   return {
-    tmdbId: details.id,
-    title: details.title || details.name || group.title,
-    overview: details.overview || '',
-    posterPath: posterUrl(details.poster_path),
-    backdropPath: backdropUrl(details.backdrop_path),
-    releaseDate: details.release_date || details.first_air_date || '',
-    voteAverage: details.vote_average || 0,
-    genres: JSON.stringify(genres),
+    tmdbId: null,
+    title: group.title,
+    overview: '',
+    posterPath: artwork.posterPath,
+    backdropPath: artwork.backdropPath,
+    releaseDate: '',
+    voteAverage: 0,
+    genres: '[]',
   };
 }
 

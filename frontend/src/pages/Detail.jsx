@@ -38,6 +38,9 @@ export default function Detail() {
   if (!show) return <div className="loading-screen">Show not found</div>;
 
   const bgImage = show.backdrop_path || show.poster_path;
+  const backgroundStyle = bgImage
+    ? { backgroundImage: `url("${encodeURI(bgImage)}")` }
+    : undefined;
   const episodes = show.episodes || [];
   const seasons = [...new Set(episodes.filter(e => e.season_number != null).map(e => e.season_number))].sort((a, b) => a - b);
 
@@ -45,7 +48,7 @@ export default function Detail() {
     <div className="detail-page">
       <div
         className="detail-hero"
-        style={bgImage ? { backgroundImage: `url(${bgImage})` } : undefined}
+        style={backgroundStyle}
       >
         <div className="hero-overlay" />
         <div className="detail-hero-content">

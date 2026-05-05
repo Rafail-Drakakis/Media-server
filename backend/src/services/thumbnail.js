@@ -3,7 +3,7 @@ import fs from 'fs';
 import path from 'path';
 import { config } from '../config.js';
 
-const THUMBNAIL_DIR = path.join(config.mediaRoot, '.thumbnails');
+const THUMBNAIL_DIR = path.join(config.mediaRoot, 'thumbnails');
 const FRAME_SECONDS = 1;
 
 // Supported image extensions for local artwork search
