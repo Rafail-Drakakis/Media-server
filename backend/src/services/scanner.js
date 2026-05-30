@@ -157,7 +157,6 @@ function readMetadataBundle(metadataPath, { movieDirRel = '' } = {}) {
     }
 
     return {
-      tmdbId: parsed?.tmdb_id || details.id || null,
       title: details.title || details.name || parsed?.title || '',
       overview: details.overview || '',
       posterPath: artwork.posterPath,
@@ -320,7 +319,6 @@ async function fetchShowMetadata(group) {
       localArtwork.backdropPath || sidecar.backdropPath
     );
     return {
-      tmdbId: sidecar.tmdbId,
       title: sidecar.title || group.title,
       overview: sidecar.overview,
       posterPath: artwork.posterPath,
@@ -332,7 +330,6 @@ async function fetchShowMetadata(group) {
   }
   const artwork = findLocalMetadataArtwork(baseDirRel);
   return {
-    tmdbId: null,
     title: group.title,
     overview: '',
     posterPath: artwork.posterPath,
@@ -344,16 +341,8 @@ async function fetchShowMetadata(group) {
 }
 
 const insertShow = db.prepare(`
-  INSERT INTO shows (tmdb_id, type, title, overview, poster_path, backdrop_path, release_date, vote_average, genres)
-  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-  ON CONFLICT(tmdb_id, type) WHERE tmdb_id IS NOT NULL DO UPDATE SET
-    title = excluded.title,
-    overview = excluded.overview,
-    poster_path = excluded.poster_path,
-    backdrop_path = excluded.backdrop_path,
-    release_date = excluded.release_date,
-    vote_average = excluded.vote_average,
-    genres = excluded.genres
+  INSERT INTO shows (type, title, overview, poster_path, backdrop_path, release_date, vote_average, genres)
+  VALUES (?, ?, ?, ?, ?, ?, ?, ?)
 `);
 
 const insertMedia = db.prepare(`
@@ -367,7 +356,6 @@ const insertMedia = db.prepare(`
 `);
 
 const updateShowPoster = db.prepare('UPDATE shows SET poster_path = ?, backdrop_path = ? WHERE id = ?');
-const findShowByTmdb = db.prepare('SELECT id FROM shows WHERE tmdb_id = ? AND type = ?');
 const findShowByTitle = db.prepare(`
   SELECT id FROM shows
   WHERE REPLACE(REPLACE(REPLACE(REPLACE(LOWER(title), '-', ' '), '.', ' '), '_', ' '), '  ', ' ')
@@ -388,7 +376,7 @@ const reassignWatchlist = db.prepare('UPDATE OR IGNORE watchlist SET show_id = ?
 const deleteWatchlistForShow = db.prepare('DELETE FROM watchlist WHERE show_id = ?');
 
 function deduplicateShows() {
-  const allShows = db.prepare('SELECT id, tmdb_id, type, title FROM shows ORDER BY id').all();
+  const allShows = db.prepare('SELECT id, type, title FROM shows ORDER BY id').all();
   const seen = new Map();
   let merged = 0;
 
@@ -398,10 +386,9 @@ function deduplicateShows() {
       .replace(/[-._]/g, ' ')
       .replace(/\s{2,}/g, ' ')
       .trim();
-    const tmdbKey = show.tmdb_id ? `tmdb::${show.tmdb_id}::${show.type}` : null;
     const titleKey = `title::${normalizedTitle}::${show.type}`;
 
-    const keepId = (tmdbKey && seen.get(tmdbKey)) || seen.get(titleKey);
+    const keepId = seen.get(titleKey);
 
     if (keepId) {
       reassignMedia.run(keepId, show.id);
@@ -410,7 +397,6 @@ function deduplicateShows() {
       deleteShowById.run(show.id);
       merged++;
     } else {
-      if (tmdbKey) seen.set(tmdbKey, show.id);
       seen.set(titleKey, show.id);
     }
   }
@@ -459,23 +445,14 @@ export async function scanLibrary() {
 
     const meta = await fetchShowMetadata(group);
 
-    if (meta.tmdbId) {
-      const existing = findShowByTmdb.get(meta.tmdbId, group.type);
-      if (existing) {
-        showId = existing.id;
-      }
-    }
-
-    if (!showId) {
-      const existing = findShowByTitle.get(meta.title, group.type);
-      if (existing) {
-        showId = existing.id;
-      }
+    const existing = findShowByTitle.get(meta.title, group.type);
+    if (existing) {
+      showId = existing.id;
     }
 
     if (!showId) {
       const result = insertShow.run(
-        meta.tmdbId, group.type, meta.title, meta.overview,
+        group.type, meta.title, meta.overview,
         meta.posterPath, meta.backdropPath, meta.releaseDate,
         meta.voteAverage, meta.genres
       );

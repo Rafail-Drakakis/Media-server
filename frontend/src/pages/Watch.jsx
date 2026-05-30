@@ -10,6 +10,30 @@ function formatTime(seconds) {
   return `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
 }
 
+function isMobileViewport() {
+  return window.matchMedia('(max-width: 768px)').matches;
+}
+
+async function lockLandscapeOrientation() {
+  try {
+    await screen.orientation?.lock?.('landscape');
+  } catch {
+    try {
+      await screen.orientation?.lock?.('landscape-primary');
+    } catch {
+      // Orientation lock unsupported or denied (common on iOS).
+    }
+  }
+}
+
+function unlockScreenOrientation() {
+  try {
+    screen.orientation?.unlock?.();
+  } catch {
+    // ignore
+  }
+}
+
 export default function Watch() {
   const { mediaId } = useParams();
   const navigate = useNavigate();
@@ -30,6 +54,58 @@ export default function Watch() {
   const [nextEpisodeId, setNextEpisodeId] = useState(null);
   const hideTimer = useRef(null);
   const saveTimer = useRef(null);
+  const pendingLandscapeLock = useRef(false);
+
+  const enterFullscreen = useCallback(() => {
+    const el = containerRef.current;
+    const v = videoRef.current;
+    if (!el && !v) return;
+
+    if (document.fullscreenElement || document.webkitFullscreenElement) {
+      setIsFullscreen(true);
+      return;
+    }
+
+    if (el?.requestFullscreen) {
+      el.requestFullscreen().then(() => setIsFullscreen(true)).catch(() => {});
+      return;
+    }
+
+    if (el?.webkitRequestFullscreen) {
+      el.webkitRequestFullscreen();
+      setIsFullscreen(true);
+      return;
+    }
+
+    // iOS Safari fallback: fullscreen directly on video element.
+    if (v?.webkitEnterFullscreen) {
+      try {
+        v.webkitEnterFullscreen();
+        setIsFullscreen(true);
+      } catch {
+        // Ignore unsupported/gesture-restricted errors.
+      }
+    }
+  }, []);
+
+  const exitFullscreen = useCallback(() => {
+    const v = videoRef.current;
+    if (document.exitFullscreen) {
+      document.exitFullscreen().catch(() => {});
+      return;
+    }
+    if (document.webkitExitFullscreen) {
+      document.webkitExitFullscreen();
+      return;
+    }
+    if (v?.webkitDisplayingFullscreen && v?.webkitExitFullscreen) {
+      try {
+        v.webkitExitFullscreen();
+      } catch {
+        // Ignore unsupported/gesture-restricted errors.
+      }
+    }
+  }, []);
 
   useEffect(() => {
     api.getProgress().then(list => {
@@ -119,6 +195,41 @@ export default function Watch() {
     else v.pause();
   }, []);
 
+  const skipTapRef = useRef({ time: 0, pending: null });
+
+  const handleVideoTap = useCallback((e) => {
+    const v = videoRef.current;
+    const container = containerRef.current;
+    if (!v || !container) return;
+
+    const clientX = e.clientX ?? e.changedTouches?.[0]?.clientX;
+    if (clientX == null) return;
+
+    const rect = container.getBoundingClientRect();
+    const relX = (clientX - rect.left) / rect.width;
+    const now = Date.now();
+    const isMobile = window.matchMedia('(max-width: 768px)').matches;
+
+    if (isMobile && now - skipTapRef.current.time < 350) {
+      clearTimeout(skipTapRef.current.pending);
+      skipTapRef.current.time = 0;
+      if (relX < 0.35) {
+        v.currentTime = Math.max(0, v.currentTime - 10);
+      } else if (relX > 0.65) {
+        v.currentTime = Math.min(v.duration || v.currentTime, v.currentTime + 10);
+      }
+      handleInteraction();
+      return;
+    }
+
+    skipTapRef.current.time = now;
+    clearTimeout(skipTapRef.current.pending);
+    skipTapRef.current.pending = setTimeout(() => {
+      togglePlay();
+      skipTapRef.current.time = 0;
+    }, 280);
+  }, [togglePlay]);
+
   const toggleMute = useCallback(() => {
     const v = videoRef.current;
     if (!v) return;
@@ -142,22 +253,65 @@ export default function Watch() {
   }, []);
 
   const toggleFullscreen = useCallback(() => {
-    const el = containerRef.current;
-    if (!el) return;
-    if (!document.fullscreenElement) {
-      el.requestFullscreen?.();
-      setIsFullscreen(true);
+    const inFs = !!(document.fullscreenElement || document.webkitFullscreenElement);
+    const mobile = isMobileViewport();
+
+    if (!inFs) {
+      if (mobile) {
+        pendingLandscapeLock.current = true;
+        enterFullscreen();
+        // Fallback when fullscreen events don't fire (e.g. iOS video fullscreen).
+        setTimeout(() => {
+          if (pendingLandscapeLock.current) {
+            pendingLandscapeLock.current = false;
+            lockLandscapeOrientation();
+          }
+        }, 300);
+      } else {
+        enterFullscreen();
+      }
     } else {
-      document.exitFullscreen?.();
+      exitFullscreen();
       setIsFullscreen(false);
+      pendingLandscapeLock.current = false;
+      if (mobile) unlockScreenOrientation();
     }
+  }, [enterFullscreen, exitFullscreen]);
+
+  useEffect(() => {
+    function onFullscreenChange() {
+      const inFs = !!(document.fullscreenElement || document.webkitFullscreenElement);
+      setIsFullscreen(inFs);
+      if (inFs && pendingLandscapeLock.current) {
+        pendingLandscapeLock.current = false;
+        lockLandscapeOrientation();
+      }
+      if (!inFs && isMobileViewport()) {
+        unlockScreenOrientation();
+      }
+    }
+    document.addEventListener('fullscreenchange', onFullscreenChange);
+    document.addEventListener('webkitfullscreenchange', onFullscreenChange);
+    return () => {
+      document.removeEventListener('fullscreenchange', onFullscreenChange);
+      document.removeEventListener('webkitfullscreenchange', onFullscreenChange);
+    };
   }, []);
 
   useEffect(() => {
-    const onFullscreenChange = () => setIsFullscreen(!!document.fullscreenElement);
-    document.addEventListener('fullscreenchange', onFullscreenChange);
-    return () => document.removeEventListener('fullscreenchange', onFullscreenChange);
-  }, []);
+    function handleOrientationChange() {
+      const isMobile = window.matchMedia('(max-width: 768px)').matches;
+      const isLandscape = window.matchMedia('(orientation: landscape)').matches;
+      if (!isMobile) return;
+      if (isLandscape) {
+        enterFullscreen();
+      }
+    }
+
+    window.addEventListener('orientationchange', handleOrientationChange);
+    handleOrientationChange();
+    return () => window.removeEventListener('orientationchange', handleOrientationChange);
+  }, [enterFullscreen]);
 
   const saveProgress = useCallback(() => {
     const v = videoRef.current;
@@ -170,7 +324,7 @@ export default function Watch() {
     return () => clearInterval(saveTimer.current);
   }, [saveProgress]);
 
-  function handleMouseMove() {
+  function handleInteraction() {
     setShowControls(true);
     clearTimeout(hideTimer.current);
     hideTimer.current = setTimeout(() => setShowControls(false), 3000);
@@ -217,7 +371,8 @@ export default function Watch() {
   return (
     <div
       className="watch-page"
-      onMouseMove={handleMouseMove}
+      onMouseMove={handleInteraction}
+      onTouchStart={handleInteraction}
     >
       <div className={`watch-top-bar ${showControls ? 'visible' : ''}`}>
         <button className="btn-back" onClick={handleBack}>&#10094; Back</button>
@@ -232,7 +387,7 @@ export default function Watch() {
           onError={() => setPlaybackError('This video format may not be supported by your browser.')}
           onPause={saveProgress}
           onEnded={saveProgress}
-          onClick={togglePlay}
+          onClick={handleVideoTap}
         >
           {hasSubtitles && selectedSubtitleIndex !== null && (
             <track

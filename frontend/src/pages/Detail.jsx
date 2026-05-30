@@ -52,26 +52,35 @@ export default function Detail() {
       >
         <div className="hero-overlay" />
         <div className="detail-hero-content">
-          <h1>{show.title}</h1>
-          <div className="detail-meta">
-            {show.release_date && <span>{show.release_date.slice(0, 4)}</span>}
-            {show.vote_average > 0 && <span className="rating">&#9733; {show.vote_average.toFixed(1)}</span>}
-            {Array.isArray(show.genres) && show.genres.length > 0 && (
-              <span>{show.genres.join(', ')}</span>
+          <div className="detail-hero-layout">
+            {show.poster_path && (
+              <img
+                className="detail-poster"
+                src={show.poster_path}
+                alt={show.title}
+              />
             )}
-          </div>
-          <p className="detail-overview">{show.overview}</p>
-          <div className="detail-actions">
-            {episodes.length > 0 && (
-              <>
-                <button className="btn-play" onClick={() => playMedia(episodes[0].id)}>
-                  &#9654; Play{episodes.length > 1 ? ' E1' : ''}
+            <div className="detail-hero-info">
+              <h1>{show.title}</h1>
+              <div className="detail-meta">
+                {show.release_date && <span>{show.release_date.slice(0, 4)}</span>}
+                {show.vote_average > 0 && <span className="rating">&#9733; {show.vote_average.toFixed(1)}</span>}
+                {Array.isArray(show.genres) && show.genres.length > 0 && (
+                  <span>{show.genres.join(', ')}</span>
+                )}
+              </div>
+              <p className="detail-overview">{show.overview}</p>
+              <div className="detail-actions">
+                {episodes.length > 0 && (
+                  <button className="btn-play" onClick={() => playMedia(episodes[0].id)}>
+                    &#9654; Play{episodes.length > 1 ? ' E1' : ''}
+                  </button>
+                )}
+                <button className="btn-secondary" onClick={toggleWatchlist}>
+                  {inWatchlist ? '&#10003; In My List' : '+ My List'}
                 </button>
-              </>
-            )}
-            <button className="btn-secondary" onClick={toggleWatchlist}>
-              {inWatchlist ? '&#10003; In My List' : '+ My List'}
-            </button>
+              </div>
+            </div>
           </div>
         </div>
       </div>

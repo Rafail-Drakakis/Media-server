@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { api } from '../api/client';
 import Hero from '../components/Hero';
 import Row from '../components/Row';
+import { useLibraryScan } from '../hooks/useLibraryScan';
 
 const TYPE_LABELS = {
   movie: 'Movies',
@@ -10,8 +11,8 @@ const TYPE_LABELS = {
   documentary: 'Documentaries',
   podcast: 'Podcasts',
   talk: 'Talks',
-   performance: 'Performances',
-   standup: 'Stand up',
+  performance: 'Performances',
+  standup: 'Stand up',
 };
 
 export default function Home() {
@@ -21,20 +22,33 @@ export default function Home() {
   const [genreShows, setGenreShows] = useState({});
   const [hero, setHero] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [scanning, setScanning] = useState(false);
   const [progressMap, setProgressMap] = useState({});
   const [typeOrder, setTypeOrder] = useState([]);
+  const [watchlistIds, setWatchlistIds] = useState(() => new Set());
+  const { scanning, scanLibrary } = useLibraryScan();
 
   useEffect(() => { loadData(); }, []);
+
+  function handleWatchlistChange(showId, inList) {
+    setWatchlistIds(prev => {
+      const next = new Set(prev);
+      if (inList) next.add(showId);
+      else next.delete(showId);
+      return next;
+    });
+  }
 
   async function loadData() {
     setLoading(true);
     try {
-      const [types, progress, genreList] = await Promise.all([
+      const [types, progress, genreList, watchlist] = await Promise.all([
         api.getTypes().catch(() => ['movie', 'series']),
         api.getProgress(),
         api.getGenres(),
+        api.getWatchlist().catch(() => []),
       ]);
+
+      setWatchlistIds(new Set(watchlist.map(w => w.id)));
 
       setTypeOrder(types);
 
@@ -92,15 +106,8 @@ export default function Home() {
   }
 
   async function handleScan() {
-    setScanning(true);
-    try {
-      await api.scanLibrary();
-      await loadData();
-    } catch (err) {
-      alert('Scan failed: ' + err.message);
-    } finally {
-      setScanning(false);
-    }
+    const ok = await scanLibrary();
+    if (ok) await loadData();
   }
 
   async function handleRemoveFromContinueWatching(item) {
@@ -137,17 +144,32 @@ export default function Home() {
         <>
           <Hero show={hero} />
           <div className="rows-container">
-            <div className="scan-bar">
-              <button className="btn-scan" onClick={handleScan} disabled={scanning}>
-                {scanning ? 'Scanning...' : 'Rescan Library'}
-              </button>
-            </div>
-            <Row title="Continue Watching" items={continueWatching} progressMap={progressMap} onRemove={handleRemoveFromContinueWatching} />
+            <Row
+              title="Continue Watching"
+              items={continueWatching}
+              progressMap={progressMap}
+              onRemove={handleRemoveFromContinueWatching}
+              cardVariant="landscape"
+            />
             {typeOrder.map(type => (
-              <Row key={type} title={TYPE_LABELS[type] || type} items={typeRows[type] || []} />
+              <Row
+                key={type}
+                title={TYPE_LABELS[type] || type}
+                items={typeRows[type] || []}
+                seeAllHref={`/browse/type/${encodeURIComponent(type)}`}
+                watchlistIds={watchlistIds}
+                onWatchlistChange={handleWatchlistChange}
+              />
             ))}
             {genres.map(genre => (
-              <Row key={genre} title={genre} items={genreShows[genre]} />
+              <Row
+                key={genre}
+                title={genre}
+                items={genreShows[genre]}
+                seeAllHref={`/browse/genre/${encodeURIComponent(genre)}`}
+                watchlistIds={watchlistIds}
+                onWatchlistChange={handleWatchlistChange}
+              />
             ))}
           </div>
         </>

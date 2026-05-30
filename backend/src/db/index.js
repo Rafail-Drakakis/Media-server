@@ -19,6 +19,29 @@ function saveDb() {
   fs.writeFileSync(dbPath, Buffer.from(data));
 }
 
+function migrateDb() {
+  const db = getDb();
+  let hasTmdbColumn = false;
+  try {
+    const info = db.exec('PRAGMA table_info(shows)');
+    if (info.length > 0) {
+      const nameIndex = info[0].columns.indexOf('name');
+      hasTmdbColumn = info[0].values.some(row => row[nameIndex] === 'tmdb_id');
+    }
+  } catch {
+    return;
+  }
+
+  if (!hasTmdbColumn) return;
+
+  try {
+    db.run('DROP INDEX IF EXISTS idx_shows_tmdb_type');
+    db.run('ALTER TABLE shows DROP COLUMN tmdb_id');
+  } catch (err) {
+    console.warn('Database migration (drop tmdb_id) failed:', err.message);
+  }
+}
+
 export async function initDb() {
   const SQL = await initSqlJs();
 
@@ -34,6 +57,7 @@ export async function initDb() {
 
   const schema = fs.readFileSync(schemaPath, 'utf-8');
   database.run(schema);
+  migrateDb();
   saveDb();
 
   setInterval(saveDb, 5000);

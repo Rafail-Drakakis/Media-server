@@ -6,11 +6,11 @@ Self-hosted personal streaming app with:
 - a React + Vite frontend (`frontend/`)
 - a local SQLite database (`backend/data.db`)
 
-The backend scans your media folder, enriches metadata from TMDB, and serves authenticated streaming endpoints.
+The backend scans your media folder, reads local sidecar metadata, and serves authenticated streaming endpoints.
 
 ## Tech Stack
 
-- Backend: Express, `sql.js`, JWT auth, TMDB integration
+- Backend: Express, `sql.js`, JWT auth
 - Frontend: React, React Router, Vite
 - Database: SQLite file at `backend/data.db`
 
@@ -24,7 +24,6 @@ The backend scans your media folder, enriches metadata from TMDB, and serves aut
 - Node.js 18+ (recommended)
 - npm
 - A local media folder mounted on your machine
-- A TMDB API key
 
 ## Environment Variables
 
@@ -37,7 +36,6 @@ cp backend/.env.example backend/.env
 Backend (`backend/.env`) values:
 
 ```env
-TMDB_API_KEY=your_tmdb_api_key
 JWT_SECRET=replace_with_a_long_random_secret
 MEDIA_ROOT=/absolute/path/to/your/media/folder
 PORT=3001
@@ -137,4 +135,3 @@ Most routes require `Authorization: Bearer <token>`.
 - No media appears after scan
   - Confirm file extensions are supported (`.mp4`, `.mkv`, `.avi`, etc.).
   - Check backend logs for scan warnings.
-

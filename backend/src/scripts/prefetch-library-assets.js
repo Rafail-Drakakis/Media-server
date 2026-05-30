@@ -95,10 +95,6 @@ async function prefetchArtworkForShow(show) {
 }
 
 async function run() {
-  if (!config.tmdbApiKey) {
-    console.warn('TMDB_API_KEY is empty. Scan may not enrich missing metadata.');
-  }
-
   await initDb();
 
   console.log('Step 1/2: scanning library and refreshing metadata...');
