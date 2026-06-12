@@ -3,6 +3,7 @@ import fs from 'fs';
 import path from 'path';
 import mime from 'mime-types';
 import { config } from '../config.js';
+import { authenticate } from '../middleware/auth.js';
 
 function normalizeRel(value) {
   return String(value || '').replace(/\\/g, '/').trim();
@@ -34,6 +35,8 @@ export function resolveMetadataAssetFsPath(urlPath) {
 }
 
 const router = Router();
+
+router.use(authenticate);
 
 router.use((req, res) => {
   if (req.method !== 'GET') {

@@ -1,8 +1,11 @@
 import { Router } from 'express';
 import fs from 'fs';
+import { authenticate } from '../middleware/auth.js';
 import { getThumbnailPath } from '../services/thumbnail.js';
 
 const router = Router();
+
+router.use(authenticate);
 
 router.get('/:showId', (req, res) => {
   const showId = req.params.showId;

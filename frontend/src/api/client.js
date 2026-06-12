@@ -12,6 +12,14 @@ export function setToken(token) {
   }
 }
 
+export function authUrl(url) {
+  if (!url || !url.startsWith('/api/')) return url;
+  const token = getToken();
+  if (!token) return url;
+  const sep = url.includes('?') ? '&' : '?';
+  return `${url}${sep}token=${encodeURIComponent(token)}`;
+}
+
 async function request(path, options = {}) {
   const token = getToken();
   const headers = { ...options.headers };
@@ -73,9 +81,9 @@ export const api = {
   addToWatchlist: (showId) => request('/watchlist', { method: 'POST', body: { showId } }),
   removeFromWatchlist: (showId) => request(`/watchlist/${showId}`, { method: 'DELETE' }),
 
-  streamUrl: (mediaId) => `/api/stream/${mediaId}?token=${getToken()}`,
+  streamUrl: (mediaId) => authUrl(`/api/stream/${mediaId}`),
 
   getSubtitles: (mediaId) => request(`/stream/${mediaId}/subtitles`),
   subtitleUrl: (mediaId, index) =>
-    `${API_BASE}/stream/${mediaId}/subtitles/${index}?format=vtt&token=${getToken()}`,
+    authUrl(`${API_BASE}/stream/${mediaId}/subtitles/${index}?format=vtt`),
 };

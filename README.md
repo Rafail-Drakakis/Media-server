@@ -25,27 +25,53 @@ The backend scans your media folder, reads local sidecar metadata, and serves au
 - npm
 - A local media folder mounted on your machine
 
-## Environment Variables
+## First Run
 
-Copy the example files first:
+1. Copy environment examples:
 
 ```bash
 cp backend/.env.example backend/.env
+cp frontend/.env.example frontend/.env
 ```
 
-Backend (`backend/.env`) values:
+2. Generate a strong JWT secret and set it in `backend/.env`:
+
+```bash
+openssl rand -base64 48
+```
+
+3. Set `MEDIA_ROOT` to your media folder path in `backend/.env`.
+
+4. Install dependencies and start both apps (see below).
+
+5. Open the frontend, register the first user account, then run a library scan from the UI.
+
+The database file (`backend/data.db`) is created automatically on first backend start. It is not committed to git.
+
+## Environment Variables
+
+Backend (`backend/.env`):
 
 ```env
 JWT_SECRET=replace_with_a_long_random_secret
 MEDIA_ROOT=/absolute/path/to/your/media/folder
 PORT=3001
+ALLOW_REGISTRATION=false
+CORS_ORIGINS=http://localhost:5173
+```
+
+Frontend (`frontend/.env`):
+
+```env
+VITE_APP_NAME=Media Server
 ```
 
 Notes:
 
-- `JWT_SECRET` must be long and random.
+- `JWT_SECRET` must be at least 32 characters. The server refuses to start with a missing or placeholder value.
 - `MEDIA_ROOT` must exist and be readable by the backend.
-- Frontend app name is set with `VITE_APP_NAME` in `frontend/.env`.
+- `ALLOW_REGISTRATION=false` (default) allows only the first user to register. Set to `true` to permit additional sign-ups.
+- `CORS_ORIGINS` is a comma-separated list of allowed frontend URLs.
 
 ## Install
 
@@ -115,7 +141,26 @@ Base path: `/api`
   - `POST /api/watchlist`
   - `DELETE /api/watchlist/:showId`
 
-Most routes require `Authorization: Bearer <token>`.
+Most routes require `Authorization: Bearer <token>`. Streaming and image assets accept the token via query string for browser media elements.
+
+## Security
+
+- Never commit `backend/.env`, `backend/data.db`, `node_modules/`, or `frontend/dist/`.
+- Registration is open only until the first user exists, unless `ALLOW_REGISTRATION=true`.
+- Set `CORS_ORIGINS` to your real frontend origin when deploying beyond localhost.
+- See [SECURITY.md](SECURITY.md) for vulnerability reporting and secret-rotation guidance.
+
+## Deploying
+
+- Build the frontend (`npm run build`) and serve it behind a reverse proxy with the backend.
+- Do not expose the Vite dev server (`npm run dev`) to the public internet. The dev config binds to all interfaces (`host: true`).
+- Rotate `JWT_SECRET` and user passwords if secrets were ever committed to git before going public.
+
+## Subtitles
+
+- Subtitles are discovered when you play a title, not during library scan.
+- The server looks for `.srt` and `.vtt` files in the video folder and in any `metadata/` folder on the path from the file up to `MEDIA_ROOT` (e.g. show-level subs under `series/My Show/metadata/` for episodes in season folders).
+- If the same filename exists in multiple locations, the copy next to the video file wins.
 
 ## Scanner Behavior
 

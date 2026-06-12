@@ -11,6 +11,31 @@ router.use(authenticate);
 
 const SUB_EXTENSIONS = new Set(['.srt', '.vtt']);
 
+function collectSubtitleDirs(videoAbsPath) {
+  const mediaRoot = path.resolve(config.mediaRoot);
+  const mediaRootPrefix = mediaRoot + path.sep;
+  const dirs = [];
+  const seen = new Set();
+  let dir = path.dirname(path.resolve(videoAbsPath));
+
+  while (dir === mediaRoot || dir.startsWith(mediaRootPrefix)) {
+    if (!seen.has(dir)) {
+      seen.add(dir);
+      dirs.push(dir);
+    }
+    const meta = path.join(dir, 'metadata');
+    if (fs.existsSync(meta) && fs.statSync(meta).isDirectory() && !seen.has(meta)) {
+      seen.add(meta);
+      dirs.push(meta);
+    }
+    if (dir === mediaRoot) break;
+    const parent = path.dirname(dir);
+    if (parent === dir) break;
+    dir = parent;
+  }
+  return dirs;
+}
+
 function getMediaAndPath(mediaId) {
   const media = db.prepare('SELECT * FROM media_items WHERE id = ?').get(mediaId);
   if (!media) return null;
@@ -23,17 +48,34 @@ function getMediaAndPath(mediaId) {
 function listSubtitlesForMedia(mediaId) {
   const info = getMediaAndPath(mediaId);
   if (!info) return [];
-  const entries = fs.readdirSync(info.dir, { withFileTypes: true });
+
+  const mediaRoot = path.resolve(config.mediaRoot);
+  const mediaRootPrefix = mediaRoot + path.sep;
+  const byPath = new Set();
+  const byBasename = new Set();
   const subs = [];
-  entries.forEach((entry) => {
-    if (!entry.isFile()) return;
-    const ext = path.extname(entry.name).toLowerCase();
-    if (!SUB_EXTENSIONS.has(ext)) return;
-    const subPath = path.join(info.dir, entry.name);
-    const resolvedSub = path.resolve(subPath);
-    if (!resolvedSub.startsWith(config.mediaRoot)) return;
-    subs.push({ filename: entry.name, filePath: resolvedSub });
-  });
+
+  for (const dir of collectSubtitleDirs(info.fullPath)) {
+    let entries;
+    try {
+      entries = fs.readdirSync(dir, { withFileTypes: true });
+    } catch {
+      continue;
+    }
+    for (const entry of entries) {
+      if (!entry.isFile()) continue;
+      const ext = path.extname(entry.name).toLowerCase();
+      if (!SUB_EXTENSIONS.has(ext)) continue;
+      const subPath = path.join(dir, entry.name);
+      const resolvedSub = path.resolve(subPath);
+      if (resolvedSub !== mediaRoot && !resolvedSub.startsWith(mediaRootPrefix)) continue;
+      if (byPath.has(resolvedSub) || byBasename.has(entry.name)) continue;
+      byPath.add(resolvedSub);
+      byBasename.add(entry.name);
+      subs.push({ filename: entry.name, filePath: resolvedSub });
+    }
+  }
+
   subs.sort((a, b) => a.filename.localeCompare(b.filename));
   return subs.map((s, i) => ({ ...s, index: i }));
 }

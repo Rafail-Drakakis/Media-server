@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { api } from '../api/client';
+import { api, authUrl } from '../api/client';
 
 function resolveShowId(show) {
   return show.show_id ?? show.id;
@@ -21,9 +21,10 @@ export default function Card({
   const [listLoading, setListLoading] = useState(false);
 
   const poster = show.poster_path || show.posterPath;
-  const imageSrc = variant === 'landscape'
+  const rawImage = variant === 'landscape'
     ? (show.backdrop_path || poster)
     : poster;
+  const imageSrc = rawImage ? authUrl(rawImage) : null;
 
   const showId = resolveShowId(show);
   const inWatchlist = watchlistIds?.has(showId) ?? false;

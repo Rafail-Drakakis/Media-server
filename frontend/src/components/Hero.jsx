@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { api } from '../api/client';
+import { api, authUrl } from '../api/client';
 
 export default function Hero({ show }) {
   const navigate = useNavigate();
@@ -8,7 +8,7 @@ export default function Hero({ show }) {
 
   if (!show) return null;
 
-  const bgImage = show.backdrop_path || show.poster_path;
+  const bgImage = authUrl(show.backdrop_path || show.poster_path);
   const backgroundStyle = bgImage
     ? { backgroundImage: `url("${encodeURI(bgImage)}")` }
     : undefined;

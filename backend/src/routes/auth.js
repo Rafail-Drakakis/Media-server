@@ -12,6 +12,11 @@ router.post('/register', (req, res) => {
     return res.status(400).json({ error: 'Email and password are required' });
   }
 
+  const userCount = db.prepare('SELECT COUNT(*) AS count FROM users').get().count;
+  if (userCount > 0 && !config.allowRegistration) {
+    return res.status(403).json({ error: 'Registration is disabled' });
+  }
+
   const existing = db.prepare('SELECT id FROM users WHERE email = ?').get(email);
   if (existing) {
     return res.status(409).json({ error: 'Email already registered' });

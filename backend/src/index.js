@@ -27,7 +27,16 @@ async function start() {
 
   const app = express();
 
-  app.use(cors({ origin: true, credentials: true }));
+  app.use(cors({
+    origin(origin, callback) {
+      if (!origin || config.corsOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(null, false);
+      }
+    },
+    credentials: true,
+  }));
   app.use(express.json());
   app.use('/api/metadata-asset', metadataAssetRoutes);
 

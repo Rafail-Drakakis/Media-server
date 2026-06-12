@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { api } from '../api/client';
+import { api, authUrl } from '../api/client';
 
 export default function Detail() {
   const { id } = useParams();
@@ -37,7 +37,7 @@ export default function Detail() {
   if (loading) return <div className="loading-screen">Loading...</div>;
   if (!show) return <div className="loading-screen">Show not found</div>;
 
-  const bgImage = show.backdrop_path || show.poster_path;
+  const bgImage = authUrl(show.backdrop_path || show.poster_path);
   const backgroundStyle = bgImage
     ? { backgroundImage: `url("${encodeURI(bgImage)}")` }
     : undefined;
@@ -56,7 +56,7 @@ export default function Detail() {
             {show.poster_path && (
               <img
                 className="detail-poster"
-                src={show.poster_path}
+                src={authUrl(show.poster_path)}
                 alt={show.title}
               />
             )}

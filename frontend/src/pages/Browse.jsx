@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { api } from '../api/client';
+import { api, authUrl } from '../api/client';
 
 const TYPE_LABELS = {
   movie: 'Movies',
@@ -71,7 +71,7 @@ export default function Browse() {
           <div className="browse-grid">
             {visibleTypes.map(type => {
               const preview = typePreviews[type];
-              const bg = preview?.backdrop_path || preview?.poster_path;
+              const bg = authUrl(preview?.backdrop_path || preview?.poster_path);
               return (
                 <Link
                   key={type}
@@ -93,7 +93,7 @@ export default function Browse() {
           <div className="browse-grid">
             {visibleGenres.map(genre => {
               const preview = genrePreviews[genre];
-              const bg = preview?.backdrop_path || preview?.poster_path;
+              const bg = authUrl(preview?.backdrop_path || preview?.poster_path);
               return (
                 <Link
                   key={genre}
