@@ -6,6 +6,7 @@ export default function Register() {
   const { register } = useAuth();
   const navigate = useNavigate();
   const [displayName, setDisplayName] = useState('');
+  const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -16,8 +17,8 @@ export default function Register() {
     setError('');
     setLoading(true);
     try {
-      await register(email, password, displayName);
-      navigate('/');
+      await register(email, password, displayName, username);
+      navigate('/home');
     } catch (err) {
       setError(err.message);
     } finally {
@@ -37,6 +38,15 @@ export default function Register() {
             value={displayName}
             onChange={e => setDisplayName(e.target.value)}
             autoFocus
+          />
+          <input
+            type="text"
+            placeholder="Username (optional)"
+            value={username}
+            onChange={e => setUsername(e.target.value)}
+            autoComplete="username"
+            pattern="[A-Za-z0-9_]{3,32}"
+            title="3–32 characters: letters, numbers, underscore"
           />
           <input
             type="email"

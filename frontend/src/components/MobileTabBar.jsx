@@ -37,7 +37,7 @@ function IconSearch({ active }) {
 }
 
 const TABS = [
-  { to: '/', end: true, label: 'Home', Icon: IconHome },
+  { to: '/home', end: true, label: 'Home', Icon: IconHome },
   { to: '/browse', label: 'Browse', Icon: IconBrowse },
   { to: '/watchlist', label: 'My List', Icon: IconList },
   { to: '/search', label: 'Search', Icon: IconSearch },

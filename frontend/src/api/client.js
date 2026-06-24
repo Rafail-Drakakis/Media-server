@@ -56,9 +56,9 @@ export const api = {
   put: (path, body) => request(path, { method: 'PUT', body }),
   delete: (path) => request(path, { method: 'DELETE' }),
 
-  login: (email, password) => request('/auth/login', { method: 'POST', body: { email, password } }),
-  register: (email, password, displayName) =>
-    request('/auth/register', { method: 'POST', body: { email, password, displayName } }),
+  login: (login, password) => request('/auth/login', { method: 'POST', body: { login, password } }),
+  register: (email, password, displayName, username) =>
+    request('/auth/register', { method: 'POST', body: { email, password, displayName, username } }),
   me: () => request('/auth/me'),
 
   getLibrary: (params) => {

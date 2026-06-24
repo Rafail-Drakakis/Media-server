@@ -24,8 +24,75 @@ function saveDb() {
   fs.writeFileSync(dbPath, Buffer.from(data));
 }
 
+function migrateUsersUsername() {
+  const db = getDb();
+  let hasUsername = false;
+  try {
+    const info = db.exec('PRAGMA table_info(users)');
+    if (info.length > 0) {
+      const nameIndex = info[0].columns.indexOf('name');
+      hasUsername = info[0].values.some(row => row[nameIndex] === 'username');
+    }
+  } catch {
+    return;
+  }
+
+  if (hasUsername) return;
+
+  db.run('ALTER TABLE users ADD COLUMN username TEXT');
+
+  const stmt = db.prepare('SELECT id, email, display_name FROM users WHERE username IS NULL OR username = ?');
+  stmt.bind(['']);
+  const users = [];
+  while (stmt.step()) {
+    const cols = stmt.getColumnNames();
+    const vals = stmt.get();
+    const row = {};
+    for (let i = 0; i < cols.length; i++) row[cols[i]] = vals[i];
+    users.push(row);
+  }
+  stmt.free();
+
+  const taken = new Set(
+    users
+      .map(u => u.username)
+      .filter(Boolean)
+      .map(u => String(u).toLowerCase()),
+  );
+
+  const slugify = (value) =>
+    String(value || '')
+      .toLowerCase()
+      .replace(/[^a-z0-9_]+/g, '_')
+      .replace(/^_|_$/g, '') || 'user';
+
+  const reserveUsername = (base) => {
+    let candidate = base;
+    let n = 1;
+    while (taken.has(candidate.toLowerCase())) {
+      candidate = `${base}${n}`;
+      n += 1;
+    }
+    taken.add(candidate.toLowerCase());
+    return candidate;
+  };
+
+  for (const user of users) {
+    const base = slugify(user.display_name) || slugify(user.email?.split('@')[0]) || `user${user.id}`;
+    const username = reserveUsername(base);
+    db.run('UPDATE users SET username = ? WHERE id = ?', [username, user.id]);
+  }
+
+  try {
+    db.run('CREATE UNIQUE INDEX IF NOT EXISTS idx_users_username ON users(username)');
+  } catch (err) {
+    console.warn('Database migration (users.username index) failed:', err.message);
+  }
+}
+
 function migrateDb() {
   const db = getDb();
+  migrateUsersUsername();
   let hasTmdbColumn = false;
   try {
     const info = db.exec('PRAGMA table_info(shows)');

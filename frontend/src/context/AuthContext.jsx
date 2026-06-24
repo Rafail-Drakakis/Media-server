@@ -19,15 +19,15 @@ export function AuthProvider({ children }) {
       .finally(() => setLoading(false));
   }, []);
 
-  const login = useCallback(async (email, password) => {
-    const data = await api.login(email, password);
+  const login = useCallback(async (loginId, password) => {
+    const data = await api.login(loginId, password);
     setToken(data.token);
     setUser(data.user);
     return data.user;
   }, []);
 
-  const register = useCallback(async (email, password, displayName) => {
-    const data = await api.register(email, password, displayName);
+  const register = useCallback(async (email, password, displayName, username) => {
+    const data = await api.register(email, password, displayName, username);
     setToken(data.token);
     setUser(data.user);
     return data.user;

@@ -5,7 +5,7 @@ import { useAuth } from '../context/AuthContext';
 export default function Login() {
   const { login } = useAuth();
   const navigate = useNavigate();
-  const [email, setEmail] = useState('');
+  const [loginId, setLoginId] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -15,8 +15,8 @@ export default function Login() {
     setError('');
     setLoading(true);
     try {
-      await login(email, password);
-      navigate('/');
+      await login(loginId, password);
+      navigate('/home');
     } catch (err) {
       setError(err.message);
     } finally {
@@ -31,12 +31,13 @@ export default function Login() {
         <form onSubmit={handleSubmit}>
           {error && <div className="auth-error">{error}</div>}
           <input
-            type="email"
-            placeholder="Email"
-            value={email}
-            onChange={e => setEmail(e.target.value)}
+            type="text"
+            placeholder="Email or username"
+            value={loginId}
+            onChange={e => setLoginId(e.target.value)}
             required
             autoFocus
+            autoComplete="username"
           />
           <input
             type="password"
