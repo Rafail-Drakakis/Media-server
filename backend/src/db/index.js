@@ -4,8 +4,13 @@ import fs from 'fs';
 import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const dbPath = path.join(__dirname, '..', '..', 'data.db');
+const dbPath = process.env.DB_PATH || path.join(__dirname, '..', '..', 'data.db');
 const schemaPath = path.join(__dirname, 'schema.sql');
+
+const dbDir = path.dirname(dbPath);
+if (!fs.existsSync(dbDir)) {
+  fs.mkdirSync(dbDir, { recursive: true });
+}
 
 let database;
 
