@@ -36,8 +36,9 @@ async function request(path, options = {}) {
 
   if (res.status === 401) {
     setToken(null);
-    if (window.location.pathname !== '/login') {
-      window.location.href = '/login';
+    const publicPaths = ['/', '/register'];
+    if (!publicPaths.includes(window.location.pathname)) {
+      window.location.href = '/';
     }
     throw new Error('Unauthorized');
   }

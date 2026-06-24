@@ -84,7 +84,7 @@ export default function Header() {
   function handleSignOut() {
     setMenuOpen(false);
     logout();
-    navigate('/login');
+    navigate('/');
   }
 
   const headerClass = [
@@ -95,9 +95,9 @@ export default function Header() {
   return (
     <header className={headerClass}>
       <div className="header-left">
-        <Link to="/home" className="logo">Netflix for Pepe</Link>
+        <Link to="/" className="logo">Netflix for Pepe</Link>
         <nav className="header-nav">
-          <NavLink to="/home" end className={({ isActive }) => isActive ? 'active' : undefined}>Home</NavLink>
+          <NavLink to="/" end className={({ isActive }) => isActive ? 'active' : undefined}>Home</NavLink>
           <NavLink to="/browse" className={({ isActive }) => isActive ? 'active' : undefined}>Browse</NavLink>
           <NavLink to="/watchlist" className={({ isActive }) => isActive ? 'active' : undefined}>My List</NavLink>
         </nav>

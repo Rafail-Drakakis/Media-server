@@ -15,8 +15,15 @@ import BrowseList from './pages/BrowseList';
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth();
   if (loading) return <div className="loading-screen">Loading...</div>;
-  if (!user) return <Navigate to="/login" replace />;
+  if (!user) return <Navigate to="/" replace />;
   return children;
+}
+
+function RootRoute() {
+  const { user, loading } = useAuth();
+  if (loading) return <div className="loading-screen">Loading...</div>;
+  if (!user) return <Login />;
+  return <Home />;
 }
 
 function AppShell() {
@@ -29,17 +36,17 @@ function AppShell() {
       {user && <Header />}
       {user && !hideTabBar && <MobileTabBar />}
       <Routes>
-        <Route path="/login" element={user ? <Navigate to="/home" replace /> : <Login />} />
-        <Route path="/register" element={user ? <Navigate to="/home" replace /> : <Register />} />
-        <Route path="/home" element={<ProtectedRoute><Home /></ProtectedRoute>} />
+        <Route path="/" element={<RootRoute />} />
+        <Route path="/login" element={<Navigate to="/" replace />} />
+        <Route path="/home" element={<Navigate to="/" replace />} />
+        <Route path="/register" element={user ? <Navigate to="/" replace /> : <Register />} />
         <Route path="/browse" element={<ProtectedRoute><Browse /></ProtectedRoute>} />
         <Route path="/browse/:kind/:slug" element={<ProtectedRoute><BrowseList /></ProtectedRoute>} />
         <Route path="/show/:id" element={<ProtectedRoute><Detail /></ProtectedRoute>} />
         <Route path="/watch/:mediaId" element={<ProtectedRoute><Watch /></ProtectedRoute>} />
         <Route path="/watchlist" element={<ProtectedRoute><Watchlist /></ProtectedRoute>} />
         <Route path="/search" element={<ProtectedRoute><Search /></ProtectedRoute>} />
-        <Route path="/" element={<Navigate to="/login" replace />} />
-        <Route path="*" element={<Navigate to="/login" replace />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </>
   );

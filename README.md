@@ -44,9 +44,25 @@ openssl rand -base64 48
 
 4. Install dependencies and start both apps (see below).
 
-5. Open the frontend, register the first user account, then run a library scan from the UI.
+5. Open `http://localhost:5173/` (or `http://localhost/` in Docker), register the first user account, then run a library scan from the UI.
 
 The database file (`backend/data.db`) is created automatically on first backend start. It is not committed to git.
+
+## Docker (production)
+
+```bash
+cp .env.example .env
+# Set JWT_SECRET and MEDIA_ROOT in .env (see below)
+docker compose --profile prod up --build -d
+```
+
+| Service | URL |
+|---------|-----|
+| **App** | http://localhost/ |
+
+The UI opens at the root path: sign in when logged out, home library when logged in. Legacy `/login` and `/home` URLs redirect to `/`.
+
+Stop with `docker compose --profile prod down`.
 
 ## Environment Variables
 
@@ -100,7 +116,7 @@ npm run dev
 
 Default URLs:
 
-- Frontend: `http://localhost:5173`
+- Frontend: `http://localhost:5173/` (root path — sign in or home)
 - Backend: `http://localhost:3001`
 
 ## Build Frontend

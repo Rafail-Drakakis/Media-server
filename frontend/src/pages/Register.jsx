@@ -18,7 +18,7 @@ export default function Register() {
     setLoading(true);
     try {
       await register(email, password, displayName, username);
-      navigate('/home');
+      navigate('/');
     } catch (err) {
       setError(err.message);
     } finally {
@@ -68,7 +68,7 @@ export default function Register() {
           </button>
         </form>
         <p className="auth-switch">
-          Already have an account? <Link to="/login">Sign in</Link>
+          Already have an account? <Link to="/">Sign in</Link>
         </p>
       </div>
     </div>
